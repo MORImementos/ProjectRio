@@ -12,6 +12,7 @@
 #include "Common/CommonTypes.h"
 #include "Common/DebugInterface.h"
 #include "Common/Logging/Log.h"
+#include "Core/API/Events.h"
 #include "Core/Core.h"
 #include "Core/PowerPC/JitInterface.h"
 #include "Core/PowerPC/MMU.h"
@@ -37,6 +38,7 @@ bool BreakPoints::IsTempBreakPoint(u32 address) const
 
 bool BreakPoints::IsBreakPointBreakOnHit(u32 address) const
 {
+  API::GetEventHub().EmitEvent(API::Events::CodeBreakpoint{address});
   return std::any_of(m_breakpoints.begin(), m_breakpoints.end(), [address](const auto& bp) {
     return bp.address == address && bp.break_on_hit;
   });
@@ -298,7 +300,7 @@ bool TMemCheck::Action(Common::DebugInterface* debug_interface, u64 value, u32 a
 {
   if (!is_enabled)
     return false;
-
+  API::GetEventHub().EmitEvent(API::Events::MemoryBreakpoint{write, addr, value});
   if ((write && is_break_on_write) || (!write && is_break_on_read))
   {
     if (log_on_hit)

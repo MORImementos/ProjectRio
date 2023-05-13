@@ -100,8 +100,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <!--Enable latest C++ standard-->
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <!--Enable Standard Conformance-->
+			<LanguageStandard>stdcpp20</LanguageStandard>
+			<!--Enable Standard Conformance-->
       <ConformanceMode>true</ConformanceMode>
       <!--Enforce some behaviors as standards-conformant when they don't default as such.-->
       <AdditionalOptions>/Zc:__cplusplus,externConstexpr,lambda,preprocessor,throwingNew /volatile:iso %(AdditionalOptions)</AdditionalOptions>
@@ -188,7 +188,9 @@
       <!--FFmpeg and the libs it pulls in-->
       <AdditionalDependencies>avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;Bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ExternalsDir)FFmpeg-bin\$(Platform)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <!--See Common/CompatPatches.cpp-->
+			<!-- python -->
+			<AdditionalLibraryDirectories>$(ExternalsDir)python\$(Platform)\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+			<!--See Common/CompatPatches.cpp-->
       <ForceSymbolReferences>enableCompatPatches</ForceSymbolReferences>
     </Link>
     <!--Link Debug:Application-->

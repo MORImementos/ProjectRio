@@ -18,3 +18,7 @@
 	url = https://github.com/libusb/libusb.git
 	branch = master
 	shallow = true
+[submodule "Externals/python"]
+	path = Externals/python
+	url = https://github.com/Felk/ext-python.git
+	branch = master

@@ -133,6 +133,7 @@ void DisplayMessage(std::string message, int time_in_ms);
 void RunRioFunctions();
 void FrameUpdateOnCPUThread();
 void OnFrameEnd();
+void OnFrameBegin();
 bool IsGolfMode();
 
 void VideoThrottle();

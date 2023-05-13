@@ -38,6 +38,7 @@
 #include "Common/Timer.h"
 #include "Common/Version.h"
 
+#include "Core/API/Events.h"
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
 #include "Core/Config/MainSettings.h"
@@ -139,6 +140,11 @@ static int draftTimer = 0;
 #ifdef USE_MEMORYWATCHER
 static std::unique_ptr<MemoryWatcher> s_memory_watcher;
 #endif
+
+void OnFrameBegin()
+{
+  API::GetEventHub().EmitEvent(API::Events::FrameAdvance{});
+}
 
 static std::unique_ptr<StatTracker> s_stat_tracker;
 

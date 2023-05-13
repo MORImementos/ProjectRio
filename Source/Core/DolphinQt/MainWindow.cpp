@@ -113,6 +113,7 @@
 #include "DolphinQt/TAS/WiiTASInputWindow.h"
 #include "DolphinQt/ToolBar.h"
 #include "DolphinQt/WiiUpdate.h"
+#include "DolphinQt/Scripting/ScriptingWidget.h"
 
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "InputCommon/GCAdapter.h"
@@ -212,7 +213,7 @@ static std::vector<std::string> StringListToStdVector(QStringList list)
 }
 
 MainWindow::MainWindow(std::unique_ptr<BootParameters> boot_parameters,
-                       const std::string& movie_path)
+                       const std::string& movie_path, std::optional<std::string> script)
     : QMainWindow(nullptr)
 {
   setWindowTitle(QString::fromStdString(Common::GetScmRevStr()));
@@ -297,6 +298,11 @@ MainWindow::MainWindow(std::unique_ptr<BootParameters> boot_parameters,
   LocalPlayers::LoadLocalPorts();
 
   Host::GetInstance()->SetMainWindowHandle(reinterpret_cast<void*>(winId()));
+  if (script.has_value())
+  {
+    m_scripting_widget->AddScript(script.value());
+  }
+
 }
 
 MainWindow::~MainWindow()
@@ -453,6 +459,7 @@ void MainWindow::CreateComponents()
   m_breakpoint_widget = new BreakpointWidget(this);
   m_code_widget = new CodeWidget(this);
   m_cheats_manager = new CheatsManager(this);
+  m_scripting_widget = new ScriptingWidget(this);
 
   const auto request_watch = [this](QString name, u32 addr) {
     m_watch_widget->AddWatch(name, addr);
@@ -734,6 +741,7 @@ void MainWindow::ConnectStack()
   addDockWidget(Qt::LeftDockWidgetArea, m_memory_widget);
   addDockWidget(Qt::LeftDockWidgetArea, m_network_widget);
   addDockWidget(Qt::LeftDockWidgetArea, m_jit_widget);
+  addDockWidget(Qt::LeftDockWidgetArea, m_scripting_widget);
 
   tabifyDockWidget(m_log_widget, m_log_config_widget);
   tabifyDockWidget(m_log_widget, m_code_widget);
@@ -744,6 +752,7 @@ void MainWindow::ConnectStack()
   tabifyDockWidget(m_log_widget, m_memory_widget);
   tabifyDockWidget(m_log_widget, m_network_widget);
   tabifyDockWidget(m_log_widget, m_jit_widget);
+  tabifyDockWidget(m_log_widget, m_scripting_widget);
 }
 
 void MainWindow::RefreshGameList()

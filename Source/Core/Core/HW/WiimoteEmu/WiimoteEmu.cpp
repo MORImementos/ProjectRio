@@ -17,7 +17,10 @@
 #include "Common/MathUtil.h"
 #include "Common/MsgHandler.h"
 
+#include "Core/API/Controller.h"
 #include "Core/Config/MainSettings.h"
+#include "Core/Config/SYSCONFSettings.h"
+#include "Core/ConfigManager.h"
 #include "Core/Core.h"
 #include "Core/HW/Wiimote.h"
 #include "Core/Movie.h"
@@ -190,6 +193,11 @@ void Wiimote::Reset()
   m_shake_state = {};
 
   m_imu_cursor_state = {};
+}
+
+WiimoteCommon::ButtonData Wiimote::GetButtonData() const
+{
+  return m_status.buttons;
 }
 
 Wiimote::Wiimote(const unsigned int index) : m_index(index)
@@ -578,6 +586,9 @@ void Wiimote::SendDataReport()
 
     Movie::CallWiiInputManip(rpt_builder, m_index, m_active_extension, GetExtensionEncryptionKey());
   }
+
+  API::GetWiiButtonsManip().PerformInputManip(rpt_builder, m_index);
+  API::GetWiiIRManip().PerformInputManip(rpt_builder, m_index);
 
   if (NetPlay::IsNetPlayRunning())
   {

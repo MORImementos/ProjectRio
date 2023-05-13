@@ -36,6 +36,7 @@
 
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
+#include "Scripting/ScriptingEngine.h"
 
 static bool QtMsgAlertHandler(const char* caption, const char* text, bool yes_no,
                               Common::MsgType style)
@@ -215,6 +216,15 @@ int main(int argc, char* argv[])
     game_specified = true;
   }
 
+  std::optional<std::string> script_filepath;
+  if (options.is_set("script"))
+  {
+    script_filepath = static_cast<const char*>(options.get("script"));
+  }
+  if (options.get("no_python_subinterpreters"))
+  {
+    Scripting::ScriptingBackend::DisablePythonSubinterpreters();
+  }
   int retval;
 
   if (save_state_path && !game_specified)
@@ -241,7 +251,8 @@ int main(int argc, char* argv[])
   {
     DolphinAnalytics::Instance().ReportDolphinStart("qt");
 
-    MainWindow win{std::move(boot), static_cast<const char*>(options.get("movie"))};
+    MainWindow win{std::move(boot), static_cast<const char*>(options.get("movie")),
+                   script_filepath};
     Settings::Instance().SetCurrentUserStyle(Settings::Instance().GetCurrentUserStyle());
     if (options.is_set("debugger"))
       Settings::Instance().SetDebugModeEnabled(true);

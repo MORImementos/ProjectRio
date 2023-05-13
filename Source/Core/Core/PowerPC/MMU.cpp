@@ -67,7 +67,15 @@ inline u32 bswap(u32 val)
 {
   return Common::swap32(val);
 }
+inline s32 bswap(s32 val)
+{
+  return Common::swap32(val);
+}
 inline u64 bswap(u64 val)
+{
+  return Common::swap64(val);
+}
+inline s64 bswap(s64 val)
 {
   return Common::swap64(val);
 }
@@ -170,7 +178,15 @@ BatTable dbat_table;
 
 static void GenerateDSIException(u32 effective_address, bool write);
 
-template <XCheckTLBFlag flag, typename T, bool never_translate = false>
+enum class TranslateCondition
+{
+  Always,
+  MsrDrSet,
+  Never
+};
+
+template <XCheckTLBFlag flag, typename T,
+          TranslateCondition translate_if = TranslateCondition::MsrDrSet>
 static T ReadFromHardware(u32 em_address)
 {
   const u32 em_address_start_page = em_address & ~HW_PAGE_MASK;
@@ -183,11 +199,13 @@ static T ReadFromHardware(u32 em_address)
     // Note that "word" means 32-bit, so paired singles or doubles might still be 32-bit aligned!
     u64 var = 0;
     for (u32 i = 0; i < sizeof(T); ++i)
-      var = (var << 8) | ReadFromHardware<flag, u8, never_translate>(em_address + i);
+      var = (var << 8) | ReadFromHardware<flag, u8, TranslateCondition::Never>(em_address + i);
     return static_cast<T>(var);
   }
 
-  if (!never_translate && MSR.DR)
+    const bool do_translate = translate_if == TranslateCondition::Always ||
+                            (translate_if == TranslateCondition::MsrDrSet && MSR.DR);
+  if (do_translate)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
     if (!translated_addr.Success())
@@ -247,7 +265,7 @@ static T ReadFromHardware(u32 em_address)
   return 0;
 }
 
-template <XCheckTLBFlag flag, bool never_translate = false>
+template <XCheckTLBFlag flag, TranslateCondition translate_if = TranslateCondition::MsrDrSet>
 static void WriteToHardware(u32 em_address, const u32 data, const u32 size)
 {
   DEBUG_ASSERT(size <= 4);
@@ -261,15 +279,18 @@ static void WriteToHardware(u32 em_address, const u32 data, const u32 size)
     // Note that "word" means 32-bit, so paired singles or doubles might still be 32-bit aligned!
     const u32 first_half_size = em_address_end_page - em_address;
     const u32 second_half_size = size - first_half_size;
-    WriteToHardware<flag, never_translate>(
-        em_address, Common::RotateRight(data, second_half_size * 8), first_half_size);
-    WriteToHardware<flag, never_translate>(em_address_end_page, data, second_half_size);
+    WriteToHardware<flag, translate_if>(
+      em_address, Common::RotateRight(data, second_half_size * 8),
+                                        first_half_size);
+    WriteToHardware<flag, translate_if>(em_address_end_page, data, second_half_size);
     return;
   }
 
   bool wi = false;
 
-  if (!never_translate && MSR.DR)
+  const bool do_translate = translate_if == TranslateCondition::Always ||
+                            (translate_if == TranslateCondition::MsrDrSet && MSR.DR);
+  if (do_translate)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
     if (!translated_addr.Success())
@@ -366,8 +387,8 @@ static void WriteToHardware(u32 em_address, const u32 data, const u32 size)
 
     for (u32 addr = em_address & ~0x7; addr < em_address + size; addr += 8)
     {
-      WriteToHardware<flag, true>(addr, rotated_data, 4);
-      WriteToHardware<flag, true>(addr + 4, rotated_data, 4);
+      WriteToHardware<flag, TranslateCondition::Never>(addr, rotated_data, 4);
+      WriteToHardware<flag, TranslateCondition::Never>(addr + 4, rotated_data, 4);
     }
 
     return;
@@ -469,7 +490,8 @@ std::optional<ReadResult<u32>> HostTryReadInstruction(const u32 address,
   }
   case RequestedAddressSpace::Physical:
   {
-    const u32 value = ReadFromHardware<XCheckTLBFlag::OpcodeNoException, u32, true>(address);
+    const u32 value =
+        ReadFromHardware<XCheckTLBFlag::OpcodeNoException, u32, TranslateCondition::Never>(address);
     return ReadResult<u32>(false, value);
   }
   case RequestedAddressSpace::Virtual:
@@ -578,7 +600,7 @@ static std::optional<ReadResult<T>> HostTryReadUX(const u32 address, RequestedAd
   }
   case RequestedAddressSpace::Physical:
   {
-    T value = ReadFromHardware<XCheckTLBFlag::NoException, T, true>(address);
+    T value = ReadFromHardware<XCheckTLBFlag::NoException, T, TranslateCondition::Never>(address);
     return ReadResult<T>(false, std::move(value));
   }
   case RequestedAddressSpace::Virtual:
@@ -686,22 +708,42 @@ void Write_F64(const double var, const u32 address)
 
 u8 HostRead_U8(const u32 address)
 {
-  return ReadFromHardware<XCheckTLBFlag::NoException, u8>(address);
+  return ReadFromHardware<XCheckTLBFlag::NoException, u8, TranslateCondition::Always>(address);
 }
 
 u16 HostRead_U16(const u32 address)
 {
-  return ReadFromHardware<XCheckTLBFlag::NoException, u16>(address);
+  return ReadFromHardware<XCheckTLBFlag::NoException, u16, TranslateCondition::Always>(address);
 }
 
 u32 HostRead_U32(const u32 address)
 {
-  return ReadFromHardware<XCheckTLBFlag::NoException, u32>(address);
+  return ReadFromHardware<XCheckTLBFlag::NoException, u32, TranslateCondition::Always>(address);
 }
 
 u64 HostRead_U64(const u32 address)
 {
-  return ReadFromHardware<XCheckTLBFlag::NoException, u64>(address);
+  return ReadFromHardware<XCheckTLBFlag::NoException, u64, TranslateCondition::Always>(address);
+}
+
+s8 HostRead_S8(const u32 address)
+{
+  return static_cast<s8>(HostRead_U8(address));
+}
+
+s16 HostRead_S16(const u32 address)
+{
+  return static_cast<s16>(HostRead_U16(address));
+}
+
+s32 HostRead_S32(const u32 address)
+{
+  return static_cast<s32>(HostRead_U32(address));
+}
+
+s64 HostRead_S64(const u32 address)
+{
+  return static_cast<s64>(HostRead_U64(address));
 }
 
 float HostRead_F32(const u32 address)
@@ -720,23 +762,45 @@ double HostRead_F64(const u32 address)
 
 void HostWrite_U8(const u32 var, const u32 address)
 {
-  WriteToHardware<XCheckTLBFlag::NoException>(address, var, 1);
+  WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 1);
 }
 
 void HostWrite_U16(const u32 var, const u32 address)
 {
-  WriteToHardware<XCheckTLBFlag::NoException>(address, var, 2);
+  WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 2);
 }
 
 void HostWrite_U32(const u32 var, const u32 address)
 {
-  WriteToHardware<XCheckTLBFlag::NoException>(address, var, 4);
+  WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 4);
 }
 
 void HostWrite_U64(const u64 var, const u32 address)
 {
-  WriteToHardware<XCheckTLBFlag::NoException>(address, static_cast<u32>(var >> 32), 4);
-  WriteToHardware<XCheckTLBFlag::NoException>(address + sizeof(u32), static_cast<u32>(var), 4);
+  WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(
+      address, static_cast<u32>(var >> 32), 4);
+  WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address + sizeof(u32),
+                                                                          static_cast<u32>(var), 4);
+}
+
+void HostWrite_S8(const s8 var, const u32 address)
+{
+  HostWrite_U8(static_cast<u8>(var), address);
+}
+
+void HostWrite_S16(const s16 var, const u32 address)
+{
+  HostWrite_U16(static_cast<u16>(var), address);
+}
+
+void HostWrite_S32(const s32 var, const u32 address)
+{
+  HostWrite_U32(static_cast<u32>(var), address);
+}
+
+void HostWrite_S64(const s64 var, const u32 address)
+{
+  HostWrite_U64(static_cast<u64>(var), address);
 }
 
 void HostWrite_F32(const float var, const u32 address)
@@ -765,7 +829,7 @@ static std::optional<WriteResult> HostTryWriteUX(const u32 var, const u32 addres
     WriteToHardware<XCheckTLBFlag::NoException>(address, var, size);
     return WriteResult(!!MSR.DR);
   case RequestedAddressSpace::Physical:
-    WriteToHardware<XCheckTLBFlag::NoException, true>(address, var, size);
+    WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Never>(address, var, size);
     return WriteResult(false);
   case RequestedAddressSpace::Virtual:
     if (!MSR.DR)
@@ -1044,7 +1108,7 @@ void ClearCacheLine(u32 address)
   // TODO: This isn't precisely correct for non-RAM regions, but the difference
   // is unlikely to matter.
   for (u32 i = 0; i < 32; i += 4)
-    WriteToHardware<XCheckTLBFlag::Write, true>(address + i, 0, 4);
+    WriteToHardware<XCheckTLBFlag::Write, TranslateCondition::Never>(address + i, 0, 4);
 }
 
 u32 IsOptimizableMMIOAccess(u32 address, u32 access_size)

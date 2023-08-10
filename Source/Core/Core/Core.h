@@ -187,7 +187,7 @@ void SaveScreenShot(std::string_view name);
 void DisplayMessage(std::string message, int time_in_ms);
 void CheckCurrentGame(const std::string& gameID);
 
-    void RunRioFunctions(const Core::CPUThreadGuard& guard);
+void RunRioFunctions(const Core::CPUThreadGuard& guard);
 void FrameUpdateOnCPUThread();
 void OnFrameEnd();
 bool IsGolfMode();
@@ -272,6 +272,7 @@ union{
   float fnum;
 } float_converter;
 
+// mssb addresses
 static const u32 aOpponentPort = 0x802EBF92;
 static const u32 aFielderPort = 0x802EBF94;
 static const u32 aBatterPort = 0x802EBF95;
@@ -300,6 +301,20 @@ static const u32 aWhoPaused = 0x8039D7D3; // 2 == fielder, 1 == batter
 static const u32 aSceneId = 0x800E877F;
 
 
-static const u32 aCurrentGolfer = 0x804E68FB; // 0-3, indicates current golfing player
+
+// toadstooltour addresses
+static const u32 aDistanceRemainingToHole = 0x802D7368;
+static const u32 aShotAccuracy = 0x804ECD30;
+static const u32 aPowerMeterDistance = 0x804ECD54;
+static const u32 aCurrentShotAimAngle = 0x804ECD5C; // radians
+static const u32 aSimLineEndpointX = 0x804ECD70;
+static const u32 aSimLineEndpointZ = 0x804ECD74;
+static const u32 aSimLineEndpointY = 0x804ECD78;
+static const u32 aPreShotVerticalAdjustment = 0x804ECDA0;
+static const u32 aPreShotHorizontalAdjustment = 0x804ECDA4;
+static const u32 aActiveShotVerticalAdjustment = 0x804ECDA8;
+static const u32 aActiveShotHorizontalAdjustment = 0x804ECDAC;
+
+static const u32 aCurrentGolfer = 0x804E68FB;  // 0-3, indicates current golfing player
 static const u32 aPlayerCount = 0x804E68FA; // indicates total player count
 }  // namespace Core

@@ -47,6 +47,36 @@ async def memorybreakpoint() -> tuple[bool, int, int]:
     """
 
 
+def on_codebreakpoint(callback: _MemorybreakpointCallback | None) -> None:
+    """
+    Registers a callback to be called every time a previously added code breakpoint is hit.
+
+    :param callback:
+    :return:
+    """
+
+
+async def codebreakpoint() -> None:
+    """
+    Awaitable event that completes once a previously added code breakpoint is hit.
+    """
+
+
+def on_framedrawn(callback: _MemorybreakpointCallback | None) -> None:
+    """
+    """
+
+
+def framedrawn() -> None:
+    """
+    Awaitable event that completes once frame is drawn.
+    """
+    
+
+def _dolphin_reset() -> None:
+    """
+    """
+
 def system_reset() -> None:
     """
     Resets the emulation.

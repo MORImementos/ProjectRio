@@ -21,7 +21,16 @@ double Read_FPR(u32 index)
   return Core::System::GetInstance().GetPPCState().ps[index].PS0AsDouble();
 }
 
-// register writing
+u32 Read_LR()
+{
+  return Core::System::GetInstance().GetPPCState().spr[8];
+}
+
+u32 Read_CTR()
+{
+  return Core::System::GetInstance().GetPPCState().spr[9];
+}
+    // register writing
 
 void Write_GPR(u32 index, u32 value)
 {

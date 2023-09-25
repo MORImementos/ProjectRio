@@ -16,6 +16,10 @@ u32 Read_GPR(u32 index);
 
 double Read_FPR(u32 index);
 
+u32 Read_LR();
+
+u32 Read_CTR();
+
 // register writing
 
 void Write_GPR(u32 index, u32 value);

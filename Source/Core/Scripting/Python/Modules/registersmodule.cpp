@@ -78,6 +78,19 @@ static PyObject* WriteFPR(PyObject* self, PyObject* args)
   Py_RETURN_NONE;
 }
 
+static PyObject* ReadLR(PyObject* self, PyObject* /*unused*/)
+{
+  PyObject* result = Py::BuildValue(API::Registers::Read_LR());
+  return result;
+}
+
+static PyObject* ReadCTR(PyObject* self, PyObject* /*unused*/)
+{
+  PyObject* result = Py::BuildValue(API::Registers::Read_CTR());
+  return result;
+}
+
+
 static void SetupRegistersModule(PyObject* module, RegistersModuleState* state)
 {
 }
@@ -89,6 +102,10 @@ PyMODINIT_FUNC PyInit_registers()
       {"write_gpr", WriteGPR, METH_VARARGS, ""},
       {"read_fpr", ReadFPR, METH_VARARGS, ""},
       {"write_fpr", WriteFPR, METH_VARARGS, ""},
+      {"read_lr", ReadLR, METH_VARARGS, ""},
+      {"read_ctr", ReadCTR, METH_VARARGS, ""},
+      //{"read_fifo", ReadFIFO, METH_VARARGS, ""},
+      //{"write_fifo", WriteFIFO, METH_VARARGS, ""},
       {nullptr, nullptr, 0, nullptr}  // Sentinel
   };
   static PyModuleDef module_def =

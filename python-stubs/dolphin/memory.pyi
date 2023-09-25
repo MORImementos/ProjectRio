@@ -2,6 +2,17 @@
 Module for interacting with the emulated machine's memory
 """
 
+def add_memcheck(addr: int, /) -> None:
+    """
+    Adds memory breakpoint.
+    """
+
+
+def remove_memcheck(addr: int, /) -> None:
+    """
+    Remove memory breakpoint.
+    """
+
 
 def read_u8(addr: int, /) -> int:
     """

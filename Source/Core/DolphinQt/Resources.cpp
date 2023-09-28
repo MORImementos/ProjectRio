@@ -26,7 +26,7 @@ QIcon Resources::LoadNamedIcon(std::string_view name, const QString& dir)
   const QString svg_path = base_path + QStringLiteral(".svg");
 
   // Prefer svg
-  if (m_svg_supported && QFileInfo(svg_path).exists())
+  if (m_svg_supported && QFileInfo(svg_path).exists() && false)
     return QIcon(svg_path);
 
   QIcon icon;
@@ -94,7 +94,7 @@ void Resources::Init()
   }
 
   m_misc.append(GetResourceIcon("nobanner"));
-  m_misc.append(GetResourceIcon("dolphin_logo"));
+  m_misc.append(GetResourceIcon("rio_logo"));
 }
 
 QIcon Resources::GetPlatform(DiscIO::Platform platform)

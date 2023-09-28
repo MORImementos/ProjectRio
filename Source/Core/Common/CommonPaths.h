@@ -13,13 +13,13 @@
 // The normal user directory
 #ifndef STEAM
 #ifdef _WIN32
-#define NORMAL_USER_DIR "Dolphin Emulator"
+#define NORMAL_USER_DIR "Project Rio"
 #elif defined(__APPLE__)
-#define NORMAL_USER_DIR "Library/Application Support/Dolphin"
+#define NORMAL_USER_DIR "Library/Application Support/Project Rio"
 #elif defined(ANDROID)
-#define NORMAL_USER_DIR "/sdcard/dolphin-emu"
+#define NORMAL_USER_DIR "/sdcard/project-rio"
 #else
-#define NORMAL_USER_DIR "dolphin-emu"
+#define NORMAL_USER_DIR "project-rio"
 #endif
 #else  // ifndef STEAM
 #ifdef _WIN32
@@ -58,6 +58,10 @@
 #define WII_USER_DIR "Wii"
 #define CONFIG_DIR "Config"
 #define GAMESETTINGS_DIR "GameSettings"
+#define STATFILES_DIR "StatFiles"
+#define MSSBFILES_DIR "MarioSuperstarBaseball"
+#define HUDFILES_DIR "HudFiles"
+#define STATELOGGERFILES_DIR "StateLoggerFiles"
 #define MAPS_DIR "Maps"
 #define CACHE_DIR "Cache"
 #define COVERCACHE_DIR "GameCovers"
@@ -82,6 +86,7 @@
 #define WII_WC24CONF_DIR "shared2" DIR_SEP "wc24"
 #define RESOURCES_DIR "Resources"
 #define THEMES_DIR "Themes"
+#define TEXTUREPACKS_DIR "TexturePacks"
 #define STYLES_DIR "Styles"
 #define GBASAVES_DIR "Saves"
 #define ANAGLYPH_DIR "Anaglyph"
@@ -104,6 +109,7 @@
 // Filenames
 // Files in the directory returned by GetUserPath(D_CONFIG_IDX)
 #define DOLPHIN_CONFIG "Dolphin.ini"
+#define LOCALPLAYERS_CONFIG "LocalPlayers.ini"
 #define GCPAD_CONFIG "GCPadNew.ini"
 #define WIIPAD_CONFIG "WiimoteNew.ini"
 #define GCKEYBOARD_CONFIG "GCKeyNew.ini"

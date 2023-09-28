@@ -25,6 +25,7 @@
 #include "Common/SPSCQueue.h"
 #include "Core/CPUThreadConfigCallback.h"
 
+
 class PointerWrap;
 
 namespace Core

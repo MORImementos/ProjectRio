@@ -108,6 +108,7 @@ struct NetSettings
 
   Sram sram;
 
+
   // These aren't sent over the network directly
   bool is_hosting = false;
   std::array<std::string, 4> gba_rom_paths{};
@@ -143,11 +144,14 @@ enum class MessageID : u8
   ChunkedDataComplete = 0x44,
   ChunkedDataAbort = 0x45,
 
+  GameMode = 0x5e,
+
   PadData = 0x60,
   PadMapping = 0x61,
   PadBuffer = 0x62,
   PadHostData = 0x63,
   GBAConfig = 0x64,
+  PadSpectator = 0x66,
 
   WiimoteData = 0x70,
   WiimoteMapping = 0x71,
@@ -169,6 +173,7 @@ enum class MessageID : u8
 
   TimeBase = 0xB0,
   DesyncDetected = 0xB1,
+  Checksum = 0xB2,
 
   ComputeGameDigest = 0xC0,
   GameDigestProgress = 0xC1,
@@ -185,6 +190,14 @@ enum class MessageID : u8
 
   SyncSaveData = 0xF1,
   SyncCodes = 0xF2,
+
+  SendCodes = 0xF3,
+  CoinFlip = 0xF4,
+  NightStadium = 0xF5,
+  GameID = 0xF6,
+  Stadium = 0xF7,
+  DisableReplays = 0xF8,
+  Course = 0xF9,
 };
 
 enum class ConnectionError : u8

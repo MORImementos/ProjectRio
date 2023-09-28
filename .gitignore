@@ -40,3 +40,4 @@ CMakeLists.txt.user
 cmake-build-debug/
 # Ignore Visual Studio Code's working dir
 /.vscode/
+Installer/ProjectRioInstaller.exe

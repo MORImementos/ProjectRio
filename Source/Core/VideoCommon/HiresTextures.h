@@ -17,6 +17,8 @@
 enum class TextureFormat;
 
 std::set<std::string> GetTextureDirectoriesWithGameId(const std::string& root_directory,
+                                                      const std::string& game_id, bool isCustomTexturePack, std::string& texturePack);
+std::set<std::string> GetTextureDirectoriesWithGameId(const std::string& root_directory,
                                                       const std::string& game_id);
 
 class HiresTexture

@@ -46,6 +46,9 @@ NetPlayIndex::List(const std::map<std::string, std::string>& filters)
 
   std::string list_url = Config::Get(Config::NETPLAY_INDEX_URL) + "/v0/list";
 
+  auto response2 =
+      request.Get(list_url, {{"X-Is-Dolphin", "1"}}, Common::HttpRequest::AllowedReturnCodes::All);
+
   if (!filters.empty())
   {
     list_url += '?';
@@ -58,31 +61,41 @@ NetPlayIndex::List(const std::map<std::string, std::string>& filters)
 
   auto response =
       request.Get(list_url, {{"X-Is-Dolphin", "1"}}, Common::HttpRequest::AllowedReturnCodes::All);
-  if (!response)
+  if (!response || !response2)
   {
     m_last_error = "NO_RESPONSE";
     return {};
   }
 
   auto json = ParseResponse(response.value());
+  auto json2 = ParseResponse(response2.value());
 
-  if (!json)
+  if (!json || !json2)
   {
     m_last_error = "BAD_JSON";
     return {};
   }
 
   const auto& status = json->get("status");
+  const auto& status2 = json2->get("status");
 
-  if (status.to_str() != "OK")
+  if (status.to_str() != "OK" || status2.to_str() != "OK")
   {
     m_last_error = status.to_str();
     return {};
   }
 
   const auto& entries = json->get("sessions");
+  const auto& entries2 = json2->get("sessions");
 
   std::vector<NetPlaySession> sessions;
+
+  Config::ONLINE_COUNT = 0;
+  for (const auto& entry : entries2.get<picojson::array>())
+  {
+    if (entry.get("version").to_str() == Common::GetRioRevStr())
+      Config::ONLINE_COUNT += static_cast<int>(entry.get("player_count").get<double>());
+  }
 
   for (const auto& entry : entries.get<picojson::array>())
   {

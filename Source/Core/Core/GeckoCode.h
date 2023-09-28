@@ -6,6 +6,7 @@
 #include <span>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "Common/CommonTypes.h"
 

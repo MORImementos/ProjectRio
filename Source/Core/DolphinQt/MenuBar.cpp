@@ -226,9 +226,6 @@ void MenuBar::AddToolsMenu()
 
   tools_menu->addSeparator();
 
-  tools_menu->addAction(tr("Start &NetPlay..."), this, &MenuBar::StartNetPlay);
-  tools_menu->addAction(tr("Browse &NetPlay Sessions...."), this, &MenuBar::BrowseNetPlay);
-
   tools_menu->addSeparator();
 
 #ifdef USE_RETRO_ACHIEVEMENTS
@@ -545,6 +542,7 @@ void MenuBar::AddOptionsMenu()
 
   options_menu->addSeparator();
 
+
   // Debugging mode only
   m_boot_to_pause = options_menu->addAction(tr("Boot to Pause"));
   m_boot_to_pause->setCheckable(true);
@@ -583,16 +581,30 @@ void MenuBar::AddHelpMenu()
 {
   QMenu* help_menu = addMenu(tr("&Help"));
 
-  QAction* website = help_menu->addAction(tr("&Website"));
+  QAction* website = help_menu->addAction(tr("&Dolphin Website"));
   connect(website, &QAction::triggered, this,
           []() { QDesktopServices::openUrl(QUrl(QStringLiteral("https://dolphin-emu.org/"))); });
+  QAction* projectrio = help_menu->addAction(tr("&Project Rio Website"));
+  connect(projectrio, &QAction::triggered, this,
+          []() { QDesktopServices::openUrl(QUrl(QStringLiteral("https://www.projectrio.online/"))); });
+  QAction* rio_discord = help_menu->addAction(tr("&Project Rio Discord"));
+  connect(rio_discord, &QAction::triggered, this, []() {
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://discord.com/invite/c3r9PabfRU")));
+  });
+  QAction* mssb_discord = help_menu->addAction(tr("&Mario Baseball Discord"));
+  connect(mssb_discord, &QAction::triggered, this, []() {
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://discord.com/invite/9ZZtpuEPCd")));
+  });
+
+  help_menu->addSeparator();
+
   QAction* documentation = help_menu->addAction(tr("Online &Documentation"));
   connect(documentation, &QAction::triggered, this, []() {
     QDesktopServices::openUrl(QUrl(QStringLiteral("https://dolphin-emu.org/docs/guides")));
   });
   QAction* github = help_menu->addAction(tr("&GitHub Repository"));
   connect(github, &QAction::triggered, this, []() {
-    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/dolphin-emu/dolphin")));
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/ProjectRio/ProjectRio")));
   });
   QAction* bugtracker = help_menu->addAction(tr("&Bug Tracker"));
   connect(bugtracker, &QAction::triggered, this, []() {

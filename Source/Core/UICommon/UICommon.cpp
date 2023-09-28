@@ -266,6 +266,10 @@ void CreateDirectories()
   File::CreateFullPath(File::GetUserPath(D_SHADERS_IDX));
   File::CreateFullPath(File::GetUserPath(D_SHADERS_IDX) + ANAGLYPH_DIR DIR_SEP);
   File::CreateFullPath(File::GetUserPath(D_STATESAVES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_STATFILES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_MSSBFILES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_HUDFILES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_STATELOGGER_IDX));
 #ifndef ANDROID
   File::CreateFullPath(File::GetUserPath(D_THEMES_IDX));
   File::CreateFullPath(File::GetUserPath(D_STYLES_IDX));
@@ -319,7 +323,7 @@ void SetUserDirectory(std::string custom_path)
   wil::unique_hkey hkey;
   DWORD local = 0;
   std::unique_ptr<TCHAR[]> configPath;
-  if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("Software\\Dolphin Emulator"), 0, KEY_QUERY_VALUE,
+  if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("Software\\Project Rio"), 0, KEY_QUERY_VALUE,
                    hkey.put()) == ERROR_SUCCESS)
   {
     DWORD size = sizeof(local);
@@ -373,7 +377,7 @@ void SetUserDirectory(std::string custom_path)
     // they will use this as the User directory instead.
     // (If we're in this case, then this key doesn't exist, so it's OK to set it.)
     std::wstring wstr_path = UTF8ToWString(user_path);
-    RegSetKeyValueW(HKEY_CURRENT_USER, TEXT("Software\\Dolphin Emulator"), TEXT("UserConfigPath"),
+    RegSetKeyValueW(HKEY_CURRENT_USER, TEXT("Software\\Project Rio"), TEXT("UserConfigPath"),
                     REG_SZ, wstr_path.c_str(),
                     static_cast<DWORD>((wstr_path.size() + 1) * sizeof(wchar_t)));
   }

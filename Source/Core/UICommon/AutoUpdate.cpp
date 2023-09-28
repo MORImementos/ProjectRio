@@ -143,32 +143,33 @@ bool AutoUpdateChecker::SystemSupportsAutoUpdates()
 #endif
 }
 
-static std::string GetPlatformID()
-{
-#if defined(_WIN32)
-#if defined(_M_ARM_64)
-  return "win-arm64";
-#else
-  return "win";
-#endif
-#elif defined(__APPLE__)
-#if defined(MACOS_UNIVERSAL_BUILD)
-  return "macos-universal";
-#else
-  return "macos";
-#endif
-#else
-  return "unknown";
-#endif
-}
+// Uncomment this when using it for the eventual use of auto-downloading/installing updates
+//static std::string GetPlatformID()
+//{
+//#if defined(_WIN32)
+//#if defined(_M_ARM_64)
+//  return "win-arm64";
+//#else
+//  return "win";
+//#endif
+//#elif defined(__APPLE__)
+//#if defined(MACOS_UNIVERSAL_BUILD)
+//  return "macos-universal";
+//#else
+//  return "macos";
+//#endif
+//#else
+//  return "unknown";
+//#endif
+//}
 
-static std::string GetUpdateServerUrl()
-{
-  auto server_url = std::getenv("DOLPHIN_UPDATE_SERVER_URL");
-  if (server_url)
-    return server_url;
-  return "https://dolphin-emu.org";
-}
+//static std::string GetUpdateServerUrl()
+//{
+//  auto server_url = std::getenv("DOLPHIN_UPDATE_SERVER_URL");
+//  if (server_url)
+//    return server_url;
+//  return "https://dolphin-emu.org";
+//}
 
 static u32 GetOwnProcessId()
 {
@@ -182,22 +183,26 @@ static u32 GetOwnProcessId()
 void AutoUpdateChecker::CheckForUpdate(std::string_view update_track,
                                        std::string_view hash_override, const CheckType check_type)
 {
-  // Don't bother checking if updates are not supported or not enabled.
-  if (!SystemSupportsAutoUpdates() || update_track.empty())
-    return;
+  // Don't bother checking if updates are not supported.
+  //if (!SystemSupportsAutoUpdates()) 
+  //  return;
 
 #ifdef __APPLE__
   CleanupFromPreviousUpdate();
 #endif
 
-  std::string_view version_hash = hash_override.empty() ? Common::GetScmRevGitStr() : hash_override;
-  std::string url = fmt::format("{}/update/check/v1/{}/{}/{}", GetUpdateServerUrl(), update_track,
-                                version_hash, GetPlatformID());
+  // std::string_view version_hash = hash_override.empty() ? Common::GetScmRevGitStr() : hash_override;
+  // std::string url = fmt::format("{}/update/check/v1/{}/{}/{}", GetUpdateServerUrl(), update_track,
+  //                               version_hash, GetPlatformID());
+  
+  // This url returns a json containing info about the latest release
+  std::string url = "https://api.github.com/repos/ProjectRio/ProjectRio/releases/latest";
+  Common::HttpRequest::Headers headers = {{"user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"}};
 
   const bool is_manual_check = check_type == CheckType::Manual;
 
   Common::HttpRequest req{std::chrono::seconds{10}};
-  auto resp = req.Get(url);
+  auto resp = req.Get(url, headers);
   if (!resp)
   {
     if (is_manual_check)
@@ -216,7 +221,8 @@ void AutoUpdateChecker::CheckForUpdate(std::string_view update_track,
   }
   picojson::object obj = json.get<picojson::object>();
 
-  if (obj["status"].get<std::string>() != "outdated")
+  // check if latest version == current
+  if (obj["tag_name"].get<std::string>() == Common::GetRioRevStr())
   {
     if (is_manual_check)
       SuccessAlertFmtT("You are running the latest version available on this update track.");
@@ -224,25 +230,30 @@ void AutoUpdateChecker::CheckForUpdate(std::string_view update_track,
     return;
   }
 
+  // NewVersionInformation nvi;
+  // nvi.this_manifest_url = obj["old"].get<picojson::object>()["manifest"].get<std::string>();
+  // nvi.next_manifest_url = obj["new"].get<picojson::object>()["manifest"].get<std::string>();
+  // nvi.content_store_url = obj["content-store"].get<std::string>();
+  // nvi.new_shortrev = obj["new"].get<picojson::object>()["name"].get<std::string>();
+  // nvi.new_hash = obj["new"].get<picojson::object>()["hash"].get<std::string>();
+
+  // // TODO: generate the HTML changelog from the JSON information.
+  // nvi.changelog_html = GenerateChangelog(obj["changelog"].get<picojson::array>());
+
+  // if (std::getenv("DOLPHIN_UPDATE_TEST_DONE"))
+  // {
+  //   // We are at end of updater test flow, send a message to server, which will kill us.
+  //   req.Get(fmt::format("{}/update-test-done/{}", GetUpdateServerUrl(), GetOwnProcessId()));
+  // }
+  // else
+  // {
+  //   OnUpdateAvailable(nvi);
+  // }
+
   NewVersionInformation nvi;
-  nvi.this_manifest_url = obj["old"].get<picojson::object>()["manifest"].get<std::string>();
-  nvi.next_manifest_url = obj["new"].get<picojson::object>()["manifest"].get<std::string>();
-  nvi.content_store_url = obj["content-store"].get<std::string>();
-  nvi.new_shortrev = obj["new"].get<picojson::object>()["name"].get<std::string>();
-  nvi.new_hash = obj["new"].get<picojson::object>()["hash"].get<std::string>();
-
-  // TODO: generate the HTML changelog from the JSON information.
-  nvi.changelog_html = GenerateChangelog(obj["changelog"].get<picojson::array>());
-
-  if (std::getenv("DOLPHIN_UPDATE_TEST_DONE"))
-  {
-    // We are at end of updater test flow, send a message to server, which will kill us.
-    req.Get(fmt::format("{}/update-test-done/{}", GetUpdateServerUrl(), GetOwnProcessId()));
-  }
-  else
-  {
-    OnUpdateAvailable(nvi);
-  }
+  nvi.new_shortrev = obj["tag_name"].get<std::string>();
+  nvi.changelog_html = obj["body"].get<std::string>();
+  OnUpdateAvailable(nvi);
 }
 
 void AutoUpdateChecker::TriggerUpdate(const AutoUpdateChecker::NewVersionInformation& info,
@@ -253,7 +264,7 @@ void AutoUpdateChecker::TriggerUpdate(const AutoUpdateChecker::NewVersionInforma
   {
     WARN_LOG_FMT(COMMON, "Auto-update: received a redundant trigger request, ignoring");
     return;
-  }
+  }  
 
   s_update_triggered = true;
 #ifdef OS_SUPPORTS_UPDATER

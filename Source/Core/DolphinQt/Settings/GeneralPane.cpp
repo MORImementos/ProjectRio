@@ -66,8 +66,9 @@ void GeneralPane::CreateLayout()
   // Create layout here
   CreateBasic();
 
-  if (AutoUpdateChecker::SystemSupportsAutoUpdates())
-    CreateAutoUpdate();
+  //if (AutoUpdateChecker::SystemSupportsAutoUpdates())
+  //  CreateAutoUpdate();
+
 
   CreateFallbackRegion();
 
@@ -84,7 +85,6 @@ void GeneralPane::OnEmulationStateChanged(Core::State state)
   const bool running = state != Core::State::Uninitialized;
 
   m_checkbox_dualcore->setEnabled(!running);
-  m_checkbox_cheats->setEnabled(!running);
   m_checkbox_override_region_settings->setEnabled(!running);
 #ifdef USE_DISCORD_PRESENCE
   m_checkbox_discord_presence->setEnabled(!running);
@@ -95,7 +95,6 @@ void GeneralPane::OnEmulationStateChanged(Core::State state)
 void GeneralPane::ConnectLayout()
 {
   connect(m_checkbox_dualcore, &QCheckBox::toggled, this, &GeneralPane::OnSaveConfig);
-  connect(m_checkbox_cheats, &QCheckBox::toggled, this, &GeneralPane::OnSaveConfig);
   connect(m_checkbox_override_region_settings, &QCheckBox::stateChanged, this,
           &GeneralPane::OnSaveConfig);
   connect(m_checkbox_auto_disc_change, &QCheckBox::toggled, this, &GeneralPane::OnSaveConfig);
@@ -103,13 +102,13 @@ void GeneralPane::ConnectLayout()
   connect(m_checkbox_discord_presence, &QCheckBox::toggled, this, &GeneralPane::OnSaveConfig);
 #endif
 
-  if (AutoUpdateChecker::SystemSupportsAutoUpdates())
-  {
-    connect(m_combobox_update_track, qOverload<int>(&QComboBox::currentIndexChanged), this,
-            &GeneralPane::OnSaveConfig);
-    connect(&Settings::Instance(), &Settings::AutoUpdateTrackChanged, this,
-            &GeneralPane::LoadConfig);
-  }
+  //if (AutoUpdateChecker::SystemSupportsAutoUpdates())
+  //{
+  //  connect(m_combobox_update_track, qOverload<int>(&QComboBox::currentIndexChanged), this,
+  //          &GeneralPane::OnSaveConfig);
+  //  connect(&Settings::Instance(), &Settings::AutoUpdateTrackChanged, this,
+  //          &GeneralPane::LoadConfig);
+  //}
 
   // Advanced
   connect(m_combobox_speedlimit, qOverload<int>(&QComboBox::currentIndexChanged), [this]() {
@@ -139,9 +138,6 @@ void GeneralPane::CreateBasic()
 
   m_checkbox_dualcore = new QCheckBox(tr("Enable Dual Core (speedup)"));
   basic_group_layout->addWidget(m_checkbox_dualcore);
-
-  m_checkbox_cheats = new QCheckBox(tr("Enable Cheats"));
-  basic_group_layout->addWidget(m_checkbox_cheats);
 
   m_checkbox_override_region_settings = new QCheckBox(tr("Allow Mismatched Region Settings"));
   basic_group_layout->addWidget(m_checkbox_override_region_settings);
@@ -176,6 +172,7 @@ void GeneralPane::CreateBasic()
   speed_limit_layout->addRow(tr("&Speed Limit:"), m_combobox_speedlimit);
 }
 
+/*
 void GeneralPane::CreateAutoUpdate()
 {
   auto* auto_update_group = new QGroupBox(tr("Auto Update Settings"));
@@ -194,6 +191,7 @@ void GeneralPane::CreateAutoUpdate()
        {tr("Don't Update"), tr("Beta (once a month)"), tr("Dev (multiple times a day)")})
     m_combobox_update_track->addItem(option);
 }
+*/
 
 void GeneralPane::CreateFallbackRegion()
 {
@@ -240,26 +238,26 @@ void GeneralPane::LoadConfig()
 {
   const QSignalBlocker blocker(this);
 
-  if (AutoUpdateChecker::SystemSupportsAutoUpdates())
-  {
-    const auto track = Settings::Instance().GetAutoUpdateTrack().toStdString();
+  //if (AutoUpdateChecker::SystemSupportsAutoUpdates())
+  //{
+  //  const auto track = Settings::Instance().GetAutoUpdateTrack().toStdString();
 
-    // If the track doesn't match any known value, set to "beta" which is the
-    // default config value on Dolphin release builds.
-    if (track == AUTO_UPDATE_DISABLE_STRING)
-      SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_DISABLE_INDEX);
-    else if (track == AUTO_UPDATE_DEV_STRING)
-      SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_DEV_INDEX);
-    else
-      SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_BETA_INDEX);
-  }
+  //  // If the track doesn't match any known value, set to "beta" which is the
+  //  // default config value on Dolphin release builds.
+  //  if (track == AUTO_UPDATE_DISABLE_STRING)
+  //    SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_DISABLE_INDEX);
+  //  else if (track == AUTO_UPDATE_DEV_STRING)
+  //    SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_DEV_INDEX);
+  //  else
+  //    SignalBlocking(m_combobox_update_track)->setCurrentIndex(AUTO_UPDATE_BETA_INDEX);
+  //}
 
 #if defined(USE_ANALYTICS) && USE_ANALYTICS
   SignalBlocking(m_checkbox_enable_analytics)
       ->setChecked(Settings::Instance().IsAnalyticsEnabled());
 #endif
   SignalBlocking(m_checkbox_dualcore)->setChecked(Config::Get(Config::MAIN_CPU_THREAD));
-  SignalBlocking(m_checkbox_cheats)->setChecked(Settings::Instance().GetCheatsEnabled());
+  //SignalBlocking(m_checkbox_cheats)->setChecked(Settings::Instance().GetCheatsEnabled());
   SignalBlocking(m_checkbox_override_region_settings)
       ->setChecked(Config::Get(Config::MAIN_OVERRIDE_REGION_SETTINGS));
   SignalBlocking(m_checkbox_auto_disc_change)
@@ -286,25 +284,25 @@ void GeneralPane::LoadConfig()
     SignalBlocking(m_combobox_fallback_region)->setCurrentIndex(FALLBACK_REGION_NTSCJ_INDEX);
 }
 
-static QString UpdateTrackFromIndex(int index)
-{
-  QString value;
-
-  switch (index)
-  {
-  case AUTO_UPDATE_DISABLE_INDEX:
-    value = QString::fromStdString(AUTO_UPDATE_DISABLE_STRING);
-    break;
-  case AUTO_UPDATE_BETA_INDEX:
-    value = QString::fromStdString(AUTO_UPDATE_BETA_STRING);
-    break;
-  case AUTO_UPDATE_DEV_INDEX:
-    value = QString::fromStdString(AUTO_UPDATE_DEV_STRING);
-    break;
-  }
-
-  return value;
-}
+//static QString UpdateTrackFromIndex(int index)
+//{
+//  QString value;
+//
+//  switch (index)
+//  {
+//  case AUTO_UPDATE_DISABLE_INDEX:
+//    value = QString::fromStdString(AUTO_UPDATE_DISABLE_STRING);
+//    break;
+//  case AUTO_UPDATE_BETA_INDEX:
+//    value = QString::fromStdString(AUTO_UPDATE_BETA_STRING);
+//    break;
+//  case AUTO_UPDATE_DEV_INDEX:
+//    value = QString::fromStdString(AUTO_UPDATE_DEV_STRING);
+//    break;
+//  }
+//
+//  return value;
+//}
 
 static DiscIO::Region UpdateFallbackRegionFromIndex(int index)
 {
@@ -336,11 +334,11 @@ void GeneralPane::OnSaveConfig()
   Config::ConfigChangeCallbackGuard config_guard;
 
   auto& settings = SConfig::GetInstance();
-  if (AutoUpdateChecker::SystemSupportsAutoUpdates())
-  {
-    Settings::Instance().SetAutoUpdateTrack(
-        UpdateTrackFromIndex(m_combobox_update_track->currentIndex()));
-  }
+  //if (AutoUpdateChecker::SystemSupportsAutoUpdates())
+  //{
+  //  Settings::Instance().SetAutoUpdateTrack(
+  //      UpdateTrackFromIndex(m_combobox_update_track->currentIndex()));
+  //}
 
 #ifdef USE_DISCORD_PRESENCE
   Discord::SetDiscordPresenceEnabled(m_checkbox_discord_presence->isChecked());
@@ -351,11 +349,9 @@ void GeneralPane::OnSaveConfig()
   DolphinAnalytics::Instance().ReloadConfig();
 #endif
   Config::SetBaseOrCurrent(Config::MAIN_CPU_THREAD, m_checkbox_dualcore->isChecked());
-  Settings::Instance().SetCheatsEnabled(m_checkbox_cheats->isChecked());
   Config::SetBaseOrCurrent(Config::MAIN_OVERRIDE_REGION_SETTINGS,
                            m_checkbox_override_region_settings->isChecked());
   Config::SetBase(Config::MAIN_AUTO_DISC_CHANGE, m_checkbox_auto_disc_change->isChecked());
-  Config::SetBaseOrCurrent(Config::MAIN_ENABLE_CHEATS, m_checkbox_cheats->isChecked());
   Settings::Instance().SetFallbackRegion(
       UpdateFallbackRegionFromIndex(m_combobox_fallback_region->currentIndex()));
 

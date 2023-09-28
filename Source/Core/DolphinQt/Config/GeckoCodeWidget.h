@@ -50,17 +50,19 @@ private:
   void SortAlphabetically();
   void SortEnabledCodesFirst();
   void SortDisabledCodesFirst();
+  void MakeEnabledList();
 
   std::string m_game_id;
   std::string m_gametdb_id;
   u16 m_game_revision;
+  std::vector<std::string> m_enabled_codes_list;
 
   CheatWarningWidget* m_warning;
   QListWidget* m_code_list;
   QLabel* m_name_label;
   QLabel* m_creator_label;
   QTextEdit* m_code_description;
-  QTextEdit* m_code_view;
+  // QTextEdit* m_code_view;
   QPushButton* m_add_code;
   QPushButton* m_edit_code;
   QPushButton* m_remove_code;

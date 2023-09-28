@@ -29,6 +29,7 @@
 #include "VideoCommon/Assets/DirectFilesystemAssetLibrary.h"
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/VideoConfig.h"
+#include <Common/MsgHandler.h>
 
 constexpr std::string_view s_format_prefix{"tex1_"};
 
@@ -203,8 +204,25 @@ HiresTexture::HiresTexture(bool has_arbitrary_mipmaps,
 std::set<std::string> GetTextureDirectoriesWithGameId(const std::string& root_directory,
                                                       const std::string& game_id)
 {
+  std::string pack = Config::Get(Config::GFX_TEXTURE_PACK);
+  bool isCustomTexturePack = pack == "" || pack == "Custom";
+  std::string sTexturePack = isCustomTexturePack ? "" : pack;
+  auto textures_search_results = Common::DoFileSearch(
+      {File::GetUserPath(D_TEXTUREPACKS_IDX), File::GetSysDirectory() + TEXTUREPACKS_DIR});
+  const auto textures_directory = File::GetSysDirectory() + TEXTUREPACKS_DIR + DIR_SEP;
+  return GetTextureDirectoriesWithGameId(isCustomTexturePack ? root_directory : textures_directory,
+                                         game_id, isCustomTexturePack, sTexturePack);
+}
+
+
+std::set<std::string> GetTextureDirectoriesWithGameId(const std::string& root_directory,
+                                                      const std::string& game_id,
+                                                      bool isCustomTexturePack,
+                                                      std::string& texturePack)
+{
   std::set<std::string> result;
-  const std::string texture_directory = root_directory + game_id;
+  const std::string textureFolder = isCustomTexturePack ? game_id : texturePack;
+  const std::string texture_directory = root_directory + textureFolder;
 
   if (File::Exists(texture_directory))
   {

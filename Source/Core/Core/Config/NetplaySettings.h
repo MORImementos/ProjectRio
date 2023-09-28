@@ -25,7 +25,7 @@ extern const Info<std::string> NETPLAY_ADDRESS;
 extern const Info<u16> NETPLAY_CONNECT_PORT;
 extern const Info<u16> NETPLAY_LISTEN_PORT;
 
-extern const Info<std::string> NETPLAY_NICKNAME;
+//extern const Info<std::string> NETPLAY_NICKNAME;
 extern const Info<bool> NETPLAY_USE_UPNP;
 
 extern const Info<bool> NETPLAY_ENABLE_QOS;
@@ -50,5 +50,13 @@ extern const Info<bool> NETPLAY_STRICT_SETTINGS_SYNC;
 extern const Info<std::string> NETPLAY_NETWORK_MODE;
 extern const Info<bool> NETPLAY_GOLF_MODE_OVERLAY;
 extern const Info<bool> NETPLAY_HIDE_REMOTE_GBAS;
+//extern const Info<bool> NETPLAY_NIGHT_STADIUM;
+extern const Info<bool> NETPLAY_DISABLE_MUSIC;
+extern const Info<bool> NETPLAY_HIGHLIGHT_BALL_SHADOW;
+//extern const Info<bool> NETPLAY_NEVER_CULL;
+
+std::vector<std::string> LobbyNameVector(const std::string& name);
+
+extern int ONLINE_COUNT;
 
 }  // namespace Config

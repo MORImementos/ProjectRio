@@ -23,6 +23,8 @@
 #include "Core/NetPlayProto.h"
 #include "Core/SyncIdentifier.h"
 #include "InputCommon/GCPadStatus.h"
+#include "Core/LocalPlayers.h"
+#include <Common/HttpRequest.h>
 
 class BootSessionData;
 
@@ -39,6 +41,10 @@ class GameFile;
 namespace WiimoteEmu
 {
 struct SerializedWiimoteState;
+}
+
+namespace Tag {
+  class TagSet;
 }
 
 namespace NetPlay
@@ -72,6 +78,17 @@ public:
   virtual void OnTraversalStateChanged(Common::TraversalClient::State state) = 0;
   virtual void OnGameStartAborted() = 0;
   virtual void OnGolferChanged(bool is_golfer, const std::string& golfer_name) = 0;
+  virtual void OnGameMode(std::string mode, std::string description,
+                          std::vector<std::string> tags) = 0;
+  virtual void StartingMsg(bool is_tagset) = 0;
+  virtual void OnCoinFlipResult(int coinFlip) = 0;
+  virtual void OnNightResult(bool is_night) = 0;
+  virtual void OnDisableReplaysResult(bool disable) = 0;
+  virtual void OnActiveGeckoCodes(std::string codeStr) = 0;
+  virtual void OnRandomStadiumResult(int stadium) = 0;
+  virtual void OnCourseResult(std::string message) = 0;
+  virtual bool IsSpectating() = 0;
+  virtual void SetSpectating(bool spectating) = 0;
 
   virtual bool IsRecording() = 0;
   virtual std::shared_ptr<const UICommon::GameFile>
@@ -100,6 +117,7 @@ class Player
 public:
   PlayerId pid{};
   std::string name;
+  std::string riokey;
   std::string revision;
   u32 ping = 0;
   SyncIdentifierComparison game_status = SyncIdentifierComparison::Unknown;
@@ -114,11 +132,14 @@ public:
   void SendAsync(sf::Packet&& packet, u8 channel_id = DEFAULT_CHANNEL);
 
   NetPlayClient(const std::string& address, const u16 port, NetPlayUI* dialog,
-                const std::string& name, const NetTraversalConfig& traversal_config);
+                const NetTraversalConfig& traversal_config,
+                LocalPlayers::LocalPlayers::Player* player, std::map<int, Tag::TagSet>* tagset_map);
   ~NetPlayClient();
 
   std::vector<const Player*> GetPlayers();
   const NetSettings& GetNetSettings() const;
+  LocalPlayers::LocalPlayers::Player* ActiveOnlinePlayer;
+  std::map<int, Tag::TagSet>* TagSetMap;
 
   // Called from the GUI thread.
   bool IsConnected() const { return m_is_connected; }
@@ -128,11 +149,21 @@ public:
   void Stop();
   bool ChangeGame(const std::string& game);
   void SendChatMessage(const std::string& msg);
+  void SendSpectatorSetting(bool spectator);
+  void SendActiveGeckoCodes();
+  void GetActiveGeckoCodes();
+  void SendCoinFlip(int randNum);
+  void SendNightStadium(bool is_night);
+  void SendStadium(int stadium);
+  void SendDisableReplays(bool disable);
+  void SendCourse(std::string message);
   void RequestStopGame();
   void SendPowerButtonEvent();
   void RequestGolfControl(PlayerId pid);
   void RequestGolfControl();
   std::string GetCurrentGolfer();
+  std::vector<std::string> v_ActiveGeckoCodes;
+  std::map<u8, u32> ourChecksum;
 
   // Send and receive pads values
   struct WiimoteDataBatchEntry
@@ -162,9 +193,23 @@ public:
   bool LocalPlayerHasControllerMapped() const;
   bool IsLocalPlayer(PlayerId pid) const;
   const PlayerId& GetLocalPlayerId() const;
+  bool PortHasPlayerAssigned(int port);
 
   static void SendTimeBase();
+  static void SendChecksum(u8 checksumId, u64 frame, u32 checksum);
   bool DoAllPlayersHaveGame();
+
+  static void AutoGolfMode(int nextGolfer);
+  static std::string GetNetplayNames(u8 PortInt);
+  static bool isNight();
+  static bool isDisableReplays();
+  static u32 sGetPlayersMaxPing();
+  static std::map<int, LocalPlayers::LocalPlayers::Player> getNetplayerUserInfo();
+  static void SendGameID(u32 gameId);
+  static bool isGolfMode();
+  bool m_night_stadium = false;
+  bool m_disable_replays = false;
+  u32 maxPing;
 
   const PadMappingArray& GetPadMapping() const;
   const GBAConfigArray& GetGBAConfig() const;
@@ -270,6 +315,9 @@ private:
   void SendGameStatus();
   void ComputeGameDigest(const SyncIdentifier& sync_identifier);
   void DisplayPlayersPing();
+
+  void AutoGolfModeLogic(int nextGolfer);
+
   u32 GetPlayersMaxPing() const;
 
   void OnData(sf::Packet& packet);
@@ -315,6 +363,17 @@ private:
   void OnGameDigestResult(sf::Packet& packet);
   void OnGameDigestError(sf::Packet& packet);
   void OnGameDigestAbort();
+  void OnGameModeMsg(sf::Packet& packet);
+  void OnSendCodesMsg(sf::Packet& packet);
+  void OnCoinFlipMsg(sf::Packet& packet);
+  void OnNightMsg(sf::Packet& packet);
+  void OnChecksumMsg(sf::Packet& packet);
+  void OnGameIDMsg(sf::Packet& packet);
+  void OnStadiumMsg(sf::Packet& packet);
+  void OnCourseMsg(sf::Packet& packet);
+  void OnDisableReplaysMsg(sf::Packet& packet);
+
+  int framesAsGolfer = 0;
 
   bool m_is_connected = false;
   ConnectionState m_connection_state = ConnectionState::Failure;
@@ -324,6 +383,7 @@ private:
   std::map<PlayerId, Player> m_players;
   std::string m_host_spec;
   std::string m_player_name;
+  std::string m_player_key;
   bool m_connecting = false;
   Common::TraversalClient* m_traversal_client = nullptr;
   std::thread m_game_digest_thread;
@@ -348,6 +408,7 @@ private:
   std::unique_ptr<IOS::HLE::FS::FileSystem> m_wii_sync_fs;
   std::vector<u64> m_wii_sync_titles;
   std::string m_wii_sync_redirect_folder;
+  Common::HttpRequest m_http{std::chrono::minutes{3}};
 };
 
 void NetPlay_Enable(NetPlayClient* const np);

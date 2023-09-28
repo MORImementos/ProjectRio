@@ -85,6 +85,8 @@ add_library(core
   Debugger/PPCDebugInterface.h
   Debugger/RSO.cpp
   Debugger/RSO.h
+  DefaultGeckoCodes.cpp
+  DefaultGeckoCodes.h
   DolphinAnalytics.cpp
   DolphinAnalytics.h
   DSP/DSPAccelerator.cpp
@@ -451,8 +453,15 @@ add_library(core
   IOS/WFS/WFSI.h
   IOS/WFS/WFSSRV.cpp
   IOS/WFS/WFSSRV.h
+  TrackerAdr.h
   LibusbUtils.cpp
   LibusbUtils.h
+  MSB_StatTracker.cpp
+  MSB_StatTracker.h
+  LocalPlayers.cpp
+  LocalPlayers.h
+  LocalPlayersConfig.cpp
+  LocalPlayersConfig.h
   MemTools.cpp
   MemTools.h
   Movie.cpp

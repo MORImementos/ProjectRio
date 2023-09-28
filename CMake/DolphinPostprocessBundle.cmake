@@ -28,6 +28,11 @@ message(STATUS "Fixing up application bundle: ${DOLPHIN_BUNDLE_PATH}")
 # needed.
 file(GLOB_RECURSE extra_libs "${DOLPHIN_BUNDLE_PATH}/Contents/MacOS/*.dylib")
 
+# Iterate through the list of paths in extra_libs and print each one
+foreach(lib_path ${extra_libs})
+    message(STATUS "Found library: ${lib_path}")
+endforeach()
+
 # BundleUtilities doesn't support DYLD_FALLBACK_LIBRARY_PATH behavior, which
 # makes it sometimes break on libraries that do weird things with @rpath. Specify
 # equivalent search directories until https://gitlab.kitware.com/cmake/cmake/issues/16625

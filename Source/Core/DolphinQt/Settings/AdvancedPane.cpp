@@ -41,6 +41,9 @@ AdvancedPane::AdvancedPane(QWidget* parent) : QWidget(parent)
   ConnectLayout();
 
   connect(&Settings::Instance(), &Settings::EmulationStateChanged, this, &AdvancedPane::Update);
+
+  // i'm incredibly lazy and don't want to go through the trouble of doing this the right way so deal with it
+  Config::SetBaseOrCurrent(Config::MAIN_MMU, false);
 }
 
 void AdvancedPane::CreateLayout()
@@ -65,11 +68,11 @@ void AdvancedPane::CreateLayout()
     m_cpu_emulation_engine_combobox->addItem(tr(CPU_CORE_NAMES.at(cpu_core)));
   }
 
-  m_enable_mmu_checkbox = new ConfigBool(tr("Enable MMU"), Config::MAIN_MMU);
-  m_enable_mmu_checkbox->SetDescription(
-      tr("Enables the Memory Management Unit, needed for some games. (ON = Compatible, OFF = "
-         "Fast)<br><br><dolphin_emphasis>If unsure, leave this unchecked.</dolphin_emphasis>"));
-  cpu_options_group_layout->addWidget(m_enable_mmu_checkbox);
+  //m_enable_mmu_checkbox = new QCheckBox(tr("Enable MMU"));
+  //m_enable_mmu_checkbox->setToolTip(tr(
+  //    "Enables the Memory Management Unit, needed for some games. (ON = Compatible, OFF = Fast)"));
+  //cpu_options_group_layout->addWidget(m_enable_mmu_checkbox);
+
 
   m_pause_on_panic_checkbox = new ConfigBool(tr("Pause on Panic"), Config::MAIN_PAUSE_ON_PANIC);
   m_pause_on_panic_checkbox->SetDescription(
@@ -197,6 +200,17 @@ void AdvancedPane::ConnectLayout()
               Config::SetBaseOrCurrent(Config::MAIN_CPU_CORE, cpu_cores[index]);
           });
 
+  //connect(m_enable_mmu_checkbox, &QCheckBox::toggled, this,
+  //        [](bool checked) { Config::SetBaseOrCurrent(Config::MAIN_MMU, checked); });
+
+  connect(m_pause_on_panic_checkbox, &QCheckBox::toggled, this,
+          [](bool checked) { Config::SetBaseOrCurrent(Config::MAIN_PAUSE_ON_PANIC, checked); });
+
+  connect(m_accurate_cpu_cache_checkbox, &QCheckBox::toggled, this,
+          [](bool checked) { Config::SetBaseOrCurrent(Config::MAIN_ACCURATE_CPU_CACHE, checked); });
+
+  m_cpu_clock_override_checkbox->setChecked(Config::Get(Config::MAIN_OVERCLOCK_ENABLE));
+
   connect(m_cpu_clock_override_checkbox, &QCheckBox::toggled, [this](bool enable_clock_override) {
     Config::SetBaseOrCurrent(Config::MAIN_OVERCLOCK_ENABLE, enable_clock_override);
     Update();
@@ -253,7 +267,11 @@ void AdvancedPane::Update()
       m_cpu_emulation_engine_combobox->setCurrentIndex(int(i));
   }
   m_cpu_emulation_engine_combobox->setEnabled(!running);
-  m_enable_mmu_checkbox->setEnabled(!running);
+
+  //m_enable_mmu_checkbox->setChecked(Config::Get(Config::MAIN_MMU));
+  //m_enable_mmu_checkbox->setEnabled(!running);
+
+  m_pause_on_panic_checkbox->setChecked(Config::Get(Config::MAIN_PAUSE_ON_PANIC));
   m_pause_on_panic_checkbox->setEnabled(!running);
   m_accurate_cpu_cache_checkbox->setEnabled(!running);
 

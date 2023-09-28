@@ -13,16 +13,16 @@
   !error "PRODUCT_VERSION must be defined"
 !endif
 
-!define PRODUCT_NAME "Dolphin"
+!define PRODUCT_NAME "Project Rio"
 !define PRODUCT_PUBLISHER "Dolphin Team"
-!define PRODUCT_WEB_SITE "https://dolphin-emu.org/"
+!define PRODUCT_WEB_SITE "https://projectrio.online/"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\${PRODUCT_NAME}.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 !define BINARY_SOURCE_DIR "..\Binary\${DOLPHIN_ARCH}"
 
 Name "${PRODUCT_NAME}"
-OutFile "dolphin-${DOLPHIN_ARCH}-${PRODUCT_VERSION}.exe"
+OutFile "projectrio-${DOLPHIN_ARCH}-${PRODUCT_VERSION}-installer.exe"
 SetCompressor /SOLID lzma
 ShowInstDetails show
 ShowUnInstDetails show

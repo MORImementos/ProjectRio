@@ -23,6 +23,13 @@
   <ImportGroup Condition="'$(Platform)'=='ARM64'">
     <Import Project="DolphinLib.ARM64.props" />
   </ImportGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile />
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="$(CoreDir)Common\SCMRevGen.vcxproj">
       <Project>{41279555-f94f-4ebc-99de-af863c10c5c4}</Project>
@@ -63,6 +70,12 @@
   <Import Project="$(ExternalsDir)xxhash\exports.props" />
   <Import Project="$(ExternalsDir)zlib-ng\exports.props" />
   <Import Project="$(ExternalsDir)zstd\exports.props" />
+  <ItemGroup>
+    <ClInclude Include="Core\DefaultGeckoCodes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Core\DefaultGeckoCodes.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <PropertyGroup>

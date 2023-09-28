@@ -179,7 +179,7 @@ T MMU::ReadFromHardware(u32 em_address)
   if (do_translate)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
-    if (!translated_addr.Success())
+    if (!translated_addr.Pass())
     {
       if (flag == XCheckTLBFlag::Read)
         GenerateDSIException(em_address, false);
@@ -292,7 +292,7 @@ void MMU::WriteToHardware(u32 em_address, const u32 data, const u32 size)
   if (do_translate)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
-    if (!translated_addr.Success())
+    if (!translated_addr.Pass())
     {
       if (flag == XCheckTLBFlag::Write)
         GenerateDSIException(em_address, true);
@@ -477,7 +477,7 @@ TryReadInstResult MMU::TryReadInstruction(u32 address)
   if (m_ppc_state.msr.IR)
   {
     auto tlb_addr = TranslateAddress<XCheckTLBFlag::Opcode>(address);
-    if (!tlb_addr.Success())
+    if (!tlb_addr.Pass())
     {
       return TryReadInstResult{false, false, 0, 0};
     }
@@ -980,7 +980,7 @@ bool MMU::IsRAMAddress(u32 address, bool translate)
   if (translate)
   {
     auto translate_address = TranslateAddress<flag>(address);
-    if (!translate_address.Success())
+    if (!translate_address.Pass())
       return false;
     address = translate_address.address;
   }
@@ -1304,7 +1304,7 @@ TranslateResult MMU::JitCache_TranslateAddress(u32 address)
 
   // TODO: We shouldn't use FLAG_OPCODE if the caller is the debugger.
   const auto tlb_addr = TranslateAddress<XCheckTLBFlag::Opcode>(address);
-  if (!tlb_addr.Success())
+  if (!tlb_addr.Pass())
     return TranslateResult{};
 
   const bool from_bat = tlb_addr.result == TranslateAddressResultEnum::BAT_TRANSLATED;
@@ -1717,7 +1717,7 @@ MMU::TranslateAddressResult MMU::TranslateAddress(u32 address)
 std::optional<u32> MMU::GetTranslatedAddress(u32 address)
 {
   auto result = TranslateAddress<XCheckTLBFlag::NoException>(address);
-  if (!result.Success())
+  if (!result.Pass())
   {
     return std::nullopt;
   }

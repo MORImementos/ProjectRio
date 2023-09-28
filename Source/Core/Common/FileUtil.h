@@ -34,7 +34,10 @@ enum
   D_GAMESETTINGS_IDX,     // user-specified settings which override both the global and the default
                           // settings (per game)
   D_SKYLANDERS_IDX,
-
+  D_STATFILES_IDX,
+  D_MSSBFILES_IDX,
+  D_HUDFILES_IDX,
+  D_STATELOGGER_IDX,
   D_MAPS_IDX,
   D_CACHE_IDX,
   D_COVERCACHE_IDX,
@@ -56,6 +59,7 @@ enum
   D_LOGS_IDX,
   D_MAILLOGS_IDX,
   D_THEMES_IDX,
+  D_TEXTUREPACKS_IDX,
   D_STYLES_IDX,
   D_PIPES_IDX,
   D_MEMORYWATCHER_IDX,
@@ -73,6 +77,7 @@ enum
   D_GPU_DRIVERS_FILE_REDIRECT,
   FIRST_FILE_USER_PATH_IDX,
   F_DOLPHINCONFIG_IDX = FIRST_FILE_USER_PATH_IDX,
+  F_LOCALPLAYERSCONFIG_IDX,
   F_GCPADCONFIG_IDX,
   F_WIIPADCONFIG_IDX,
   F_GCKEYBOARDCONFIG_IDX,
@@ -230,6 +235,9 @@ std::string GetThemeDir(const std::string& theme_name);
 // Returns the path to where the sys file are
 const std::string& GetSysDirectory();
 
+// Returns Dir of built-in themes
+std::string GetSysStylesPath();
+
 #ifdef ANDROID
 void SetSysDirectory(const std::string& path);
 void SetGpuDriverDirectories(const std::string& path, const std::string& lib_path);
@@ -243,7 +251,7 @@ std::string GetBundleDirectory();
 std::string GetExePath();
 std::string GetExeDirectory();
 
-bool WriteStringToFile(const std::string& filename, std::string_view str);
+bool WriteStringToFile(const std::string& filename, std::string_view str, bool append=false);
 bool ReadFileToString(const std::string& filename, std::string& str);
 
 // To deal with Windows not fully supporting UTF-8 and Android not fully supporting paths.

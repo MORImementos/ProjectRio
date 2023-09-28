@@ -28,6 +28,7 @@
 #include "Common/FileUtil.h"
 #include "Common/IniFile.h"
 #include "Common/Logging/Log.h"
+#include "Common/MsgHandler.h"
 
 #include "Core/AchievementManager.h"
 #include "Core/Boot/Boot.h"
@@ -64,6 +65,16 @@ bool BootCore(std::unique_ptr<BootParameters> boot, const WindowSystemInfo& wsi)
 
   if (!StartUp.SetPathsAndGameMetadata(*boot))
     return false;
+
+ // Block running anything other than MSSB
+  if (!StartUp.GetGameID().empty() && !StartUp.GameIsAllowed())
+  {
+    PanicAlertFmt("This is not a copy of Mario Superstar Baseball.\n"
+                "Project Rio is only intended to be used for Mario Superstar Baseball.\n"
+                "Please use regular Dolphin (https://dolphin-emu.org/) for running "
+                "games other than Mario Superstar Baseball.");
+    return false;
+  }
 
   // Movie settings
   if (Movie::IsPlayingInput() && Movie::IsConfigSaved())

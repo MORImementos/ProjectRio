@@ -67,6 +67,7 @@
 #include "Core/State.h"
 #include "Core/System.h"
 #include "Core/WiiUtils.h"
+#include "Core/LocalPlayersConfig.h"
 
 #include "DiscIO/DirectoryBlob.h"
 #include "DiscIO/NANDImporter.h"
@@ -78,6 +79,7 @@
 #include "DolphinQt/Config/ControllersWindow.h"
 #include "DolphinQt/Config/FreeLookWindow.h"
 #include "DolphinQt/Config/Graphics/GraphicsWindow.h"
+#include "DolphinQt/Config/LocalPlayersWindow.h"
 #include "DolphinQt/Config/LogConfigWidget.h"
 #include "DolphinQt/Config/LogWidget.h"
 #include "DolphinQt/Config/Mapping/MappingWindow.h"
@@ -136,8 +138,13 @@
 
 #include "UICommon/UICommon.h"
 
+#include "DolphinQt/Config/PropertiesDialog.h"
+#include "DolphinQt/GameList/GameList.h"
+
 #include "VideoCommon/NetPlayChatUI.h"
 #include "VideoCommon/VideoConfig.h"
+
+#include "Common/TagSet.h"
 
 #ifdef HAVE_XRANDR
 #include "UICommon/X11Utils.h"
@@ -310,6 +317,9 @@ MainWindow::MainWindow(std::unique_ptr<BootParameters> boot_parameters,
       return;
     }
   }
+
+  // lazy fix -- call this here so local players are loaded in every time client launches
+  LocalPlayers::LoadLocalPorts();
 
   Host::GetInstance()->SetMainWindowHandle(reinterpret_cast<void*>(winId()));
 
@@ -684,6 +694,11 @@ void MainWindow::ConnectToolBar()
   connect(m_tool_bar, &ToolBar::ControllersPressed, this, &MainWindow::ShowControllersWindow);
   connect(m_tool_bar, &ToolBar::GraphicsPressed, this, &MainWindow::ShowGraphicsWindow);
 
+  connect(m_tool_bar, &ToolBar::StartNetPlayPressed, this, &MainWindow::ShowNetPlaySetupDialog);
+  connect(m_tool_bar, &ToolBar::ViewGeckoCodes, this, &MainWindow::ShowGeckoCodes);
+  connect(m_tool_bar, &ToolBar::ViewLocalPlayers, this, &MainWindow::ShowLocalPlayersWindow);
+
+
   connect(m_tool_bar, &ToolBar::StepPressed, m_code_widget, &CodeWidget::Step);
   connect(m_tool_bar, &ToolBar::StepOverPressed, m_code_widget, &CodeWidget::StepOver);
   connect(m_tool_bar, &ToolBar::StepOutPressed, m_code_widget, &CodeWidget::StepOut);
@@ -718,6 +733,7 @@ void MainWindow::ConnectHost()
 {
   connect(Host::GetInstance(), &Host::RequestStop, this, &MainWindow::RequestStop);
 }
+
 
 void MainWindow::ConnectStack()
 {
@@ -1242,6 +1258,19 @@ void MainWindow::ShowControllersWindow()
   m_controllers_window->activateWindow();
 }
 
+void MainWindow::ShowLocalPlayersWindow()
+{
+  if (!m_local_players_window)
+  {
+    m_local_players_window = new LocalPlayersWindow(this);
+    InstallHotkeyFilter(m_local_players_window);
+  }
+
+  m_local_players_window->show();
+  m_local_players_window->raise();
+  m_local_players_window->activateWindow();
+}
+
 void MainWindow::ShowFreeLookWindow()
 {
   if (!m_freelook_window)
@@ -1328,10 +1357,29 @@ void MainWindow::ShowGraphicsWindow()
 
 void MainWindow::ShowNetPlaySetupDialog()
 {
-  SetQWidgetWindowDecorations(m_netplay_setup_dialog);
+  // Validate Rio User
+  LocalPlayers::LocalPlayers::AccountValidationType type = LocalPlayers::m_online_player.ValidateAccount(m_http);
+
+  if (type == LocalPlayers::LocalPlayers::Invalid)
+  {
+    ModalMessageBox::critical(
+        this, tr("Error"),
+        tr("The Username and Rio Key of the Online Player could not be validated. You must make a "
+           "Rio account to access online play.\n\n"
+           "To access online play, please follow these steps:\n"
+           "- open the \"Rio Config\" tab and click the \"Add Player\" button.\n"
+           "- click \"Create Account\" and create a Rio account through the Project Rio website.\n"
+           "- make sure to verify your email and receive your Rio Key.\n"
+           "- enter your username and Rio Key into the appropriate text boxes, then click "
+           "\"Save\".\n"
+           "- set the \"Online Player\" combo box to your newly added account."));
+    return;
+  }
   m_netplay_setup_dialog->show();
   m_netplay_setup_dialog->raise();
   m_netplay_setup_dialog->activateWindow();
+  user_tagsets = m_netplay_setup_dialog->assignOnlineAccount(LocalPlayers::m_online_player);
+  m_active_account.SetUserInfo(LocalPlayers::m_online_player);
 }
 
 void MainWindow::ShowNetPlayBrowser()
@@ -1342,6 +1390,22 @@ void MainWindow::ShowNetPlayBrowser()
   SetQWidgetWindowDecorations(browser);
   browser->exec();
 }
+
+
+void MainWindow::ShowGeckoCodes()
+{
+  if (!m_gecko_dialog)
+  {
+    m_gecko_dialog = new GeckoDialog(this);
+    InstallHotkeyFilter(m_gecko_dialog);
+  }
+
+  m_gecko_dialog->show();
+  m_gecko_dialog->raise();
+  m_gecko_dialog->activateWindow();
+}
+
+
 
 void MainWindow::ShowFIFOPlayer()
 {
@@ -1497,6 +1561,7 @@ void MainWindow::NetPlayInit()
   connect(m_netplay_dialog, &NetPlayDialog::rejected, this, &MainWindow::NetPlayQuit);
   connect(m_netplay_setup_dialog, &NetPlaySetupDialog::Join, this, &MainWindow::NetPlayJoin);
   connect(m_netplay_setup_dialog, &NetPlaySetupDialog::Host, this, &MainWindow::NetPlayHost);
+  connect(m_netplay_setup_dialog, &NetPlaySetupDialog::JoinBrowser, this, &MainWindow::NetPlayJoin);
 #ifdef USE_DISCORD_PRESENCE
   connect(m_netplay_discord, &DiscordHandler::Join, this, &MainWindow::NetPlayJoin);
 
@@ -1547,22 +1612,24 @@ bool MainWindow::NetPlayJoin()
 
   const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
   const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
-  const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
   const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
   const bool host_input_authority = network_mode == "hostinputauthority" || network_mode == "golf";
 
-  if (server)
+  const bool is_hosting_netplay = server != nullptr;
+  if (is_hosting_netplay)
   {
     server->SetHostInputAuthority(host_input_authority);
     server->AdjustPadBufferSize(Config::Get(Config::NETPLAY_BUFFER_SIZE));
+    bool tagset_exists = m_netplay_setup_dialog->GetTagSet().has_value();
+    int tagset_id = tagset_exists ? m_netplay_setup_dialog->GetTagSet().value().id : 0;
+    server->SetTagSet(tagset_exists, tagset_id);
   }
 
   // Create Client
-  const bool is_hosting_netplay = server != nullptr;
   Settings::Instance().ResetNetPlayClient(new NetPlay::NetPlayClient(
-      host_ip, host_port, m_netplay_dialog, nickname,
+      host_ip, host_port, m_netplay_dialog,
       NetPlay::NetTraversalConfig{is_hosting_netplay ? false : is_traversal, traversal_host,
-                                  traversal_port}));
+                                  traversal_port}, &m_active_account, &user_tagsets));
 
   if (!Settings::Instance().GetNetPlayClient()->IsConnected())
   {
@@ -1571,7 +1638,7 @@ bool MainWindow::NetPlayJoin()
   }
 
   m_netplay_setup_dialog->close();
-  m_netplay_dialog->show(nickname, is_traversal);
+  m_netplay_dialog->show(is_traversal);
 
   return true;
 }

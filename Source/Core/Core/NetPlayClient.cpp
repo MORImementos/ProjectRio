@@ -33,6 +33,8 @@
 #include "Common/Timer.h"
 #include "Common/Version.h"
 
+#include "Core/HW/Memmap.h"
+
 #include "Core/ActionReplay.h"
 #include "Core/Boot/Boot.h"
 #include "Core/Config/MainSettings.h"
@@ -75,6 +77,12 @@
 #include "UICommon/GameFile.h"
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/VideoConfig.h"
+#include <Core/ConfigLoaders/GameConfigLoader.h>
+#include <Core/GeckoCodeConfig.h>
+#include "Core/HotkeyManager.h"
+#include "Core/LocalPlayersConfig.h"
+#include "Core/Core.h"
+#include "Common/TagSet.h"
 
 namespace NetPlay
 {
@@ -127,10 +135,31 @@ NetPlayClient::~NetPlayClient()
 
 // called from ---GUI--- thread
 NetPlayClient::NetPlayClient(const std::string& address, const u16 port, NetPlayUI* dialog,
-                             const std::string& name, const NetTraversalConfig& traversal_config)
-    : m_dialog(dialog), m_player_name(name)
+                             const NetTraversalConfig& traversal_config,
+                             LocalPlayers::LocalPlayers::Player* player,
+                             std::map<int, Tag::TagSet>* tagset_map)
+    : m_dialog(dialog)
 {
   ClearBuffers();
+
+    // Validate Rio User
+  LocalPlayers::LocalPlayers::AccountValidationType type = player->ValidateAccount(m_http);
+
+if (type == LocalPlayers::LocalPlayers::Invalid)
+  {
+    m_dialog->OnConnectionError(_trans("The Username and Rio Key of the Online Player could not be validated. You must make a Rio account to access online play.\n\n"
+           "To access online play, please follow these steps:\n"
+           "- open the \"Rio Config\" tab and click the \"Add Player\" button.\n"
+           "- click \"Create Account\" and create a Rio account through the Project Rio website.\n"
+           "- make sure to verify your email and receive your Rio Key.\n"
+           "- enter your username and Rio Key into the appropriate text boxes, then click \"Save\".\n"
+        "- set the \"Online Player\" combo box to your newly added account."));
+    return;  // no netplay for invalid account
+  }
+  ActiveOnlinePlayer = player;
+  TagSetMap = tagset_map;
+  m_player_name = ActiveOnlinePlayer->GetUsername();
+  m_player_key = ActiveOnlinePlayer->GetUserID();
 
   if (!traversal_config.use_traversal)
   {
@@ -250,6 +279,7 @@ bool NetPlayClient::Connect()
   packet << Common::GetScmRevGitStr();
   packet << Common::GetNetplayDolphinVer();
   packet << m_player_name;
+  packet << m_player_key;
   Send(packet);
   enet_host_flush(m_client);
   sf::Packet rpac;
@@ -306,6 +336,7 @@ bool NetPlayClient::Connect()
 
     Player player;
     player.name = m_player_name;
+    player.riokey = m_player_key;
     player.pid = m_pid;
     player.revision = Common::GetNetplayDolphinVer();
 
@@ -476,6 +507,42 @@ void NetPlayClient::OnData(sf::Packet& packet)
     OnGameDigestAbort();
     break;
 
+  case MessageID::GameMode:
+    OnGameModeMsg(packet);
+    break;
+  
+  case MessageID::SendCodes:
+    OnSendCodesMsg(packet);
+    break;
+  
+  case MessageID::CoinFlip:
+    OnCoinFlipMsg(packet);
+    break;
+
+  case MessageID::NightStadium:
+    OnNightMsg(packet);
+    break;  
+
+  case MessageID::Checksum:
+    OnChecksumMsg(packet);
+    break;
+
+  case MessageID::GameID:
+    OnGameIDMsg(packet);
+    break;
+
+  case MessageID::Stadium:
+    OnStadiumMsg(packet);
+    break;
+
+  case MessageID::DisableReplays:
+    OnDisableReplaysMsg(packet);
+    break;
+
+  case MessageID::Course:
+    OnCourseMsg(packet);
+    break;
+
   default:
     PanicAlertFmtT("Unknown message received with id : {0}", static_cast<u8>(mid));
     break;
@@ -487,9 +554,10 @@ void NetPlayClient::OnPlayerJoin(sf::Packet& packet)
   Player player{};
   packet >> player.pid;
   packet >> player.name;
+  packet >> player.riokey;
   packet >> player.revision;
 
-  INFO_LOG_FMT(NETPLAY, "Player {} ({}) using {} joined", player.name, player.pid, player.revision);
+  INFO_LOG_FMT(NETPLAY, "Player {} (pid: {}) using {} joined", player.name, player.pid, player.revision);
 
   {
     std::lock_guard lkp(m_crit.players);
@@ -630,8 +698,14 @@ void NetPlayClient::OnChunkedDataAbort(sf::Packet& packet)
 
 void NetPlayClient::OnPadMapping(sf::Packet& packet)
 {
+  bool assigned = false;
   for (PlayerId& mapping : m_pad_map)
+  {
     packet >> mapping;
+    if (!assigned && mapping == this->m_pid)
+      assigned = true;
+  }
+  m_dialog->SetSpectating(!assigned);
 
   UpdateDevices();
 
@@ -774,17 +848,21 @@ void NetPlayClient::OnGolfSwitch(sf::Packet& packet)
   m_current_golfer = pid;
   m_dialog->OnGolferChanged(m_local_player->pid == pid, pid != 0 ? m_players[pid].name : "");
 
+  NOTICE_LOG_FMT(NETPLAY, "Running OnGolfSwitch. local pid: {} - current golfer pid: {} - previous golfer: {}", m_local_player->pid, pid, previous_golfer);
+
   if (m_local_player->pid == previous_golfer)
   {
     sf::Packet spac;
     spac << MessageID::GolfRelease;
     Send(spac);
+    NOTICE_LOG_FMT(NETPLAY, "Sent GolfRelease");
   }
   else if (m_local_player->pid == pid)
   {
     sf::Packet spac;
     spac << MessageID::GolfAcquire;
     Send(spac);
+    NOTICE_LOG_FMT(NETPLAY, "Sent GolfAquire");
 
     // Pads are already calibrated so we can just ignore this
     m_first_pad_status_received.fill(true);
@@ -798,6 +876,7 @@ void NetPlayClient::OnGolfPrepare(sf::Packet& packet)
 {
   m_wait_on_input_received = true;
   m_wait_on_input = true;
+  NOTICE_LOG_FMT(NETPLAY, "Ran function OnGolfPrepare");
 }
 
 void NetPlayClient::OnChangeGame(sf::Packet& packet)
@@ -838,6 +917,7 @@ void NetPlayClient::OnGameStatus(sf::Packet& packet)
 
 void NetPlayClient::OnStartGame(sf::Packet& packet)
 {
+  NOTICE_LOG_FMT(NETPLAY, "\n --- Start of game {} --- \npid: {}", m_selected_game.game_id, m_local_player->pid);
   {
     std::lock_guard lkg(m_crit.game);
 
@@ -936,11 +1016,13 @@ void NetPlayClient::OnStartGame(sf::Packet& packet)
   }
 
   m_dialog->OnMsgStartGame();
+  m_dialog->StartingMsg(Core::isTagSetActive(true));
 }
 
 void NetPlayClient::OnStopGame(sf::Packet& packet)
 {
   INFO_LOG_FMT(NETPLAY, "Game stopped");
+  NOTICE_LOG_FMT(NETPLAY, "\n --- Game stopped --- \n");
 
   StopGame();
   m_dialog->OnMsgStopGame();
@@ -1520,6 +1602,101 @@ void NetPlayClient::OnGameDigestAbort()
   m_dialog->AbortGameDigest();
 }
 
+void NetPlayClient::OnGameModeMsg(sf::Packet& packet)
+{
+  bool exists;
+  int tagset_id;
+  packet >> exists;
+  packet >> tagset_id;
+
+  std::optional<Tag::TagSet> current_tagset =
+      exists ? std::optional<Tag::TagSet>{TagSetMap->at(tagset_id)} : std::nullopt;
+
+  std::string mode = exists ? current_tagset.value().name : "none";
+  std::string description = exists ? current_tagset.value().description() : "No Description";
+  std::vector<std::string> tags =
+      exists ? current_tagset.value().tag_names_vector() :
+          std::vector<std::string>{"none"};
+
+  Core::SetTagSet(std::move(current_tagset), true);
+  m_dialog->OnGameMode(mode, description, tags);
+}
+
+void NetPlayClient::OnSendCodesMsg(sf::Packet& packet)
+{
+  std::string codeStr;
+  packet >> codeStr;
+  auto ss = std::stringstream{codeStr};
+
+  v_ActiveGeckoCodes = {};
+  for (std::string line; std::getline(ss, line, '\n');)
+    v_ActiveGeckoCodes.push_back(line);
+
+  // add to chat
+  std::string firstLine = "Active Gecko Codes:";
+  m_dialog->OnActiveGeckoCodes(firstLine);
+  for (const std::string code : v_ActiveGeckoCodes)
+    m_dialog->OnActiveGeckoCodes(code);
+}
+
+void NetPlayClient::OnCoinFlipMsg(sf::Packet& packet)
+{
+  int coinFlip;
+  packet >> coinFlip;
+  m_dialog->OnCoinFlipResult(coinFlip);
+}
+
+void NetPlayClient::OnNightMsg(sf::Packet& packet)
+{
+  bool is_night;
+  packet >> is_night;
+  m_dialog->OnNightResult(is_night);
+  m_night_stadium = is_night;
+}
+
+void NetPlayClient::OnDisableReplaysMsg(sf::Packet& packet)
+{
+  bool disable;
+  packet >> disable;
+  m_dialog->OnDisableReplaysResult(disable);
+  m_disable_replays = disable;
+}
+
+void NetPlayClient::OnChecksumMsg(sf::Packet& packet)
+{
+  u32 inChecksum;
+  u8 checksumId;
+  packet >> inChecksum;
+  packet >> checksumId;
+
+  if (ourChecksum[checksumId] != inChecksum)
+  {
+    m_dialog->OnDesync(0, "");
+  }
+}
+
+void NetPlayClient::OnGameIDMsg(sf::Packet& packet)
+{
+  u32 gameID;
+  packet >> gameID;
+
+  Core::SetGameID(gameID);
+}
+
+void NetPlayClient::OnStadiumMsg(sf::Packet& packet)
+{
+  int stadium;
+  packet >> stadium;
+  m_dialog->OnRandomStadiumResult(stadium);
+}
+
+void NetPlayClient::OnCourseMsg(sf::Packet& packet)
+{
+  std::string message;
+  packet >> message;
+  m_dialog->OnCourseResult(message);
+}
+
 void NetPlayClient::Send(const sf::Packet& packet, const u8 channel_id)
 {
   Common::ENet::SendPacket(m_server, packet, channel_id);
@@ -1527,11 +1704,61 @@ void NetPlayClient::Send(const sf::Packet& packet, const u8 channel_id)
 
 void NetPlayClient::DisplayPlayersPing()
 {
+  maxPing = GetPlayersMaxPing();
   if (!g_ActiveConfig.bShowNetPlayPing)
     return;
 
-  OSD::AddTypedMessage(OSD::MessageType::NetPlayPing, fmt::format("Ping: {}", GetPlayersMaxPing()),
+  OSD::AddTypedMessage(OSD::MessageType::NetPlayPing, fmt::format("Ping: {}", maxPing),
                        OSD::Duration::SHORT, OSD::Color::CYAN);
+}
+
+bool NetPlayClient::isNight()
+{
+  return netplay_client->m_night_stadium;
+}
+
+bool NetPlayClient::isGolfMode()
+{
+  return netplay_client->m_host_input_authority;
+}
+
+bool NetPlayClient::isDisableReplays()
+{
+  return netplay_client->m_disable_replays;
+}
+
+std::string NetPlayClient::GetNetplayNames(u8 PortInt)
+{
+  bool playerExists = PortInt >= 0 && PortInt <= 3 ? true : false;  // checks that the port isn't a CPU
+  if (!playerExists)
+    return ""; // empty string for no player
+
+  return netplay_client->m_players[netplay_client->m_pad_map[PortInt]].name;
+}
+
+std::map<int, LocalPlayers::LocalPlayers::Player> NetPlayClient::getNetplayerUserInfo()
+{
+  std::map<int, LocalPlayers::LocalPlayers::Player> NetplayerUserInfo;
+  for (auto& player : netplay_client->m_players)
+  {
+    LocalPlayers::LocalPlayers::Player player_info;
+    player_info.username = player.second.name;
+    player_info.userid = player.second.riokey;
+    int player_port = 0;
+
+    for (int i = 0; i < netplay_client->m_pad_map.size(); i++)
+    {
+      if (netplay_client->m_pad_map[i] == player.first)
+        player_port = i + 1;
+    }
+    NetplayerUserInfo.emplace(std::pair<int, LocalPlayers::LocalPlayers::Player>(player_port, player_info));
+  }
+  return NetplayerUserInfo;
+}
+
+u32 NetPlayClient::sGetPlayersMaxPing()
+{
+  return netplay_client->maxPing;
 }
 
 u32 NetPlayClient::GetPlayersMaxPing() const
@@ -1687,6 +1914,100 @@ void NetPlayClient::SendChatMessage(const std::string& msg)
   sf::Packet packet;
   packet << MessageID::ChatMessage;
   packet << msg;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendSpectatorSetting(bool spectator)
+{
+  sf::Packet packet;
+  packet << MessageID::PadSpectator;
+  packet << spectator;
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendActiveGeckoCodes()
+{
+  sf::Packet packet;
+  packet << MessageID::SendCodes;
+  std::string codeStr = "";
+
+  for (const std::string code : v_ActiveGeckoCodes)
+    codeStr += code + "\n";
+  packet << codeStr;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendNightStadium(bool is_night)
+{
+  sf::Packet packet;
+  packet << MessageID::NightStadium;
+  packet << is_night;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendDisableReplays(bool disable)
+{
+  sf::Packet packet;
+  packet << MessageID::DisableReplays;
+  packet << disable;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::GetActiveGeckoCodes()
+{
+  // don't use any gecko codes if playing under a tagset
+  if (Core::isTagSetActive(true))
+    return;
+
+  // Find all INI files
+  const auto game_id = m_selected_game.game_id;
+  const auto revision = 0;
+  Common::IniFile globalIni;
+  for (const std::string& filename : ConfigLoaders::GetGameIniFilenames(game_id, revision))
+    globalIni.Load(File::GetSysDirectory() + GAMESETTINGS_DIR DIR_SEP + filename, true);
+  Common::IniFile localIni;
+  for (const std::string& filename : ConfigLoaders::GetGameIniFilenames(game_id, revision))
+    localIni.Load(File::GetUserPath(D_GAMESETTINGS_IDX) + filename, true);
+
+  // Create a Gecko Code Vector with just the active codes
+  std::vector<Gecko::GeckoCode> s_active_codes =
+      Gecko::SetAndReturnActiveCodes(Gecko::LoadCodes(globalIni, localIni));
+
+  v_ActiveGeckoCodes = {};
+  for (const Gecko::GeckoCode& active_code : s_active_codes)
+  {
+    v_ActiveGeckoCodes.push_back(active_code.name);
+  }
+  SendActiveGeckoCodes();
+}
+
+void NetPlayClient::SendCoinFlip(int randNum)
+{
+  sf::Packet packet;
+  packet << MessageID::CoinFlip;
+  packet << randNum;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendStadium(int stadium)
+{
+  sf::Packet packet;
+  packet << MessageID::Stadium;
+  packet << stadium;
+
+  SendAsync(std::move(packet));
+}
+
+void NetPlayClient::SendCourse(std::string message)
+{
+  sf::Packet packet;
+  packet << MessageID::Course;
+  packet << message;
 
   SendAsync(std::move(packet));
 }
@@ -2028,6 +2349,7 @@ bool NetPlayClient::GetNetPads(const int pad_nb, const bool batching, GCPadStatu
       sf::Packet spac;
       spac << MessageID::GolfPrepare;
       Send(spac);
+      NOTICE_LOG_FMT(NETPLAY, "Sent GolfPrepare to clients");
 
       m_wait_on_input_received = false;
     }
@@ -2077,17 +2399,31 @@ bool NetPlayClient::GetNetPads(const int pad_nb, const bool batching, GCPadStatu
       // we toggle the emulation speed too quickly, so to prevent this
       // we wait until the buffer has been over for at least 1 second.
 
-      const bool buffer_over_target = m_pad_buffer[pad_nb].Size() > m_target_buffer_size + 1;
+      unsigned int currentBuffer = m_pad_buffer[pad_nb].Size();
+      const bool buffer_over_target = currentBuffer > m_target_buffer_size + 1;
+      //bool isPitchInProgress = Memory::Read_U8(0x8088A81B) == 1;
+      //bool pitchComplete = Memory::Read_U8(0x80890B18) == 1;
       if (!buffer_over_target)
         m_buffer_under_target_last = std::chrono::steady_clock::now();
 
       std::chrono::duration<double> time_diff =
           std::chrono::steady_clock::now() - m_buffer_under_target_last;
-      if (time_diff.count() >= 1.0 || !buffer_over_target)
+      bool bDrainHotkeyPressed = HotkeyManagerEmu::IsPressed(HK_DRAIN_GOLF_BUFFER, true);
+
+      if ((time_diff.count() >= 1.0 || (!buffer_over_target && !bDrainHotkeyPressed))
+        /*&& !isPitchInProgress*/) // don't speed up game during a pitch
       {
         // run fast if the buffer is overfilled, otherwise run normal speed
         Config::SetCurrent(Config::MAIN_EMULATION_SPEED, buffer_over_target ? 0.0f : 1.0f);
       }
+      // after a pitch, we speed up game to keep buffer low
+      //if (pitchComplete)
+      //  Config::SetCurrent(Config::MAIN_EMULATION_SPEED,
+      //    m_pad_buffer[pad_nb].Size() > 1 ? 0.0f : 1.0f);
+      // Hotkey drains netplay buffer for non golfer
+      if (bDrainHotkeyPressed)
+        Config::SetCurrent(Config::MAIN_EMULATION_SPEED,
+                           m_pad_buffer[pad_nb].Size() > 1 ? 0.0f : 1.0f);
     }
     else
     {
@@ -2366,17 +2702,70 @@ void NetPlayClient::RequestGolfControl(const PlayerId pid)
 {
   if (!m_host_input_authority || !m_net_settings.golf_mode)
     return;
-
   sf::Packet packet;
   packet << MessageID::GolfRequest;
   packet << pid;
   SendAsync(std::move(packet));
+  NOTICE_LOG_FMT(NETPLAY, "Sent GolfRequest for client {} to clients", pid);
 }
 
 void NetPlayClient::RequestGolfControl()
 {
   RequestGolfControl(m_local_player->pid);
 }
+
+void NetPlayClient::SendGameID(u32 gameId)
+{
+  // only golfer sends
+  if (netplay_client->m_local_player->pid != netplay_client->m_current_golfer)
+    return;
+
+  sf::Packet packet;
+  packet << MessageID::GameID;
+  packet << gameId;
+  netplay_client->SendAsync(std::move(packet));
+}
+
+void NetPlayClient::AutoGolfMode(int nextGolfer)
+{
+  netplay_client->AutoGolfModeLogic(nextGolfer);
+}
+
+void NetPlayClient::AutoGolfModeLogic(int nextGolfer)
+{
+  PlayerId clientID = m_local_player->pid; // refers to netplay client (the computer that's connected)
+
+  // don't run the rest of the code unless we're the golfer
+  if (clientID != m_current_golfer) {
+    framesAsGolfer = 0;
+    return;
+  }
+
+  // auto golf logic will only complete if client's been the golfer for more than 60 frames
+  // this is to ensure that under laggier conditions, a golfer who's game is too far behind
+  // doesn't swap the golfer status back and forth for a short while, which can be jarring to players
+  if (framesAsGolfer < 255) // don't want a memory overflow here
+    framesAsGolfer++;
+  if (framesAsGolfer <= 60) // delay this so that swapping bugs are way less likely; 1 second lockout window (60 frames)
+    return;
+
+  // if the player who should be the gofler isn't in the lobby, return
+  if (!PortHasPlayerAssigned(nextGolfer))
+    return;
+
+  // if the current golfer is also the one who should be the golfer, return
+  // this prevents bugs due to requesting a swap every frame
+  // m_pad_map is an array. the indices are the ports (0->3) and the values are the client ID's assigned to that port
+  if (m_pad_map[nextGolfer] == clientID)
+    return;
+
+  // find the player that should be the golfer and assign them as the golfer
+  NOTICE_LOG_FMT(NETPLAY, "Client {} will swap golfer to port {}", clientID, nextGolfer + 1);
+  RequestGolfControl(m_pad_map[nextGolfer]);
+  framesAsGolfer = 0;
+  NOTICE_LOG_FMT(NETPLAY, "Successfully swapped golfer");
+}
+
 
 // called from ---GUI--- thread
 std::string NetPlayClient::GetCurrentGolfer()
@@ -2387,7 +2776,15 @@ std::string NetPlayClient::GetCurrentGolfer()
   return "";
 }
 
+
 // called from ---GUI--- thread
+
+bool NetPlayClient::PortHasPlayerAssigned(int port)
+{
+  return m_pad_map[port] != 0;
+}
+
+
 bool NetPlayClient::LocalPlayerHasControllerMapped() const
 {
   return PlayerHasControllerMapped(m_local_player->pid);
@@ -2510,6 +2907,23 @@ void NetPlayClient::SendGameStatus()
 
   packet << static_cast<u32>(result);
   Send(packet);
+}
+
+void NetPlayClient::SendChecksum(u8 checksumId, u64 frame, u32 checksum)
+{
+  netplay_client->ourChecksum[checksumId] = checksum;
+
+  if (frame < 1000) // dont send the initial ones since they're whack
+    return;
+
+  u8 newId = checksumId + 11 & 0xf;  // send checksum from 5 seconds ago
+
+  sf::Packet packet;
+  packet << MessageID::Checksum;
+  packet << netplay_client->ourChecksum[newId]; 
+  packet << newId;
+
+  netplay_client->SendAsync(std::move(packet));
 }
 
 void NetPlayClient::SendTimeBase()
@@ -2761,6 +3175,7 @@ void NetPlay_Disable()
   std::lock_guard lk(crit_netplay_client);
   netplay_client = nullptr;
 }
+
 }  // namespace NetPlay
 
 // stuff hacked into dolphin

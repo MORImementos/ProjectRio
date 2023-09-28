@@ -15,6 +15,8 @@
 #include "DolphinQt/Resources.h"
 #include "DolphinQt/Settings.h"
 
+
+
 static QSize ICON_SIZE(32, 32);
 
 ToolBar::ToolBar(QWidget* parent) : QToolBar(parent)
@@ -60,7 +62,6 @@ void ToolBar::OnEmulationStateChanged(Core::State state)
   bool running = state != Core::State::Uninitialized;
   m_stop_action->setEnabled(running);
   m_fullscreen_action->setEnabled(running);
-  m_screenshot_action->setEnabled(running);
 
   bool playing = running && state != Core::State::Paused;
   UpdatePausePlayButtonState(playing);
@@ -86,6 +87,10 @@ void ToolBar::OnDebugModeToggled(bool enabled)
   m_skip_action->setVisible(enabled);
   m_show_pc_action->setVisible(enabled);
   m_set_pc_action->setVisible(enabled);
+  m_open_action->setVisible(enabled);
+  m_refresh_action->setVisible(enabled);
+  m_pause_play_action->setVisible(enabled);
+  m_stop_action->setVisible(enabled);
 
   bool paused = Core::GetState() == Core::State::Paused;
   m_step_action->setEnabled(paused);
@@ -116,13 +121,17 @@ void ToolBar::MakeActions()
   m_refresh_action = addAction(tr("Refresh"), [this] { emit RefreshPressed(); });
   m_refresh_action->setEnabled(false);
 
-  addSeparator();
+  // addSeparator();
 
   m_pause_play_action = addAction(tr("Play"), this, &ToolBar::PlayPressed);
 
   m_stop_action = addAction(tr("Stop"), this, &ToolBar::StopPressed);
-  m_fullscreen_action = addAction(tr("FullScr"), this, &ToolBar::FullScreenPressed);
-  m_screenshot_action = addAction(tr("ScrShot"), this, &ToolBar::ScreenShotPressed);
+
+  // addSeparator();
+
+
+  m_local_play_action = addAction(tr("Rio Config"), this, &ToolBar::ViewLocalPlayers);
+  m_start_netplay_action = addAction(tr("Online Play"), this, &ToolBar::StartNetPlayPressed);
 
   addSeparator();
 
@@ -130,11 +139,19 @@ void ToolBar::MakeActions()
   m_graphics_action = addAction(tr("Graphics"), this, &ToolBar::GraphicsPressed);
   m_controllers_action = addAction(tr("Controllers"), this, &ToolBar::ControllersPressed);
 
+  m_view_gecko_codes_action = addAction(tr("Mods"), this, &ToolBar::ViewGeckoCodes);
+
+  addSeparator();
+
+  m_fullscreen_action = addAction(tr("FullScr"), this, &ToolBar::FullScreenPressed);
+// m_screenshot_action = addAction(tr("ScrShot"), this, &ToolBar::ScreenShotPressed);
+
   // Ensure every button has about the same width
   std::vector<QWidget*> items;
-  for (const auto& action :
-       {m_open_action, m_pause_play_action, m_stop_action, m_stop_action, m_fullscreen_action,
-        m_screenshot_action, m_config_action, m_graphics_action, m_controllers_action,
+  for (const auto& action : {
+        m_open_action, m_pause_play_action, m_stop_action, m_stop_action,
+        m_local_play_action, m_start_netplay_action, m_fullscreen_action,
+        m_config_action, m_graphics_action, m_controllers_action,
         m_step_action, m_step_over_action, m_step_out_action, m_skip_action, m_show_pc_action,
         m_set_pc_action})
   {
@@ -189,8 +206,10 @@ void ToolBar::UpdateIcons()
 
   m_stop_action->setIcon(Resources::GetThemeIcon("stop"));
   m_fullscreen_action->setIcon(Resources::GetThemeIcon("fullscreen"));
-  m_screenshot_action->setIcon(Resources::GetThemeIcon("screenshot"));
   m_config_action->setIcon(Resources::GetThemeIcon("config"));
   m_controllers_action->setIcon(Resources::GetThemeIcon("classic"));
   m_graphics_action->setIcon(Resources::GetThemeIcon("graphics"));
+  m_start_netplay_action->setIcon(Resources::GetThemeIcon("wifi"));
+  m_view_gecko_codes_action->setIcon(Resources::GetThemeIcon("debugger_add_breakpoint@2x"));
+  m_local_play_action->setIcon(Resources::GetThemeIcon("rio"));
 }

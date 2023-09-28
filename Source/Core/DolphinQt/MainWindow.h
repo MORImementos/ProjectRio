@@ -12,6 +12,7 @@
 #include <string>
 
 #include "Core/Boot/Boot.h"
+#include "Core/LocalPlayersConfig.h"
 
 class QMenu;
 class QStackedWidget;
@@ -30,10 +31,12 @@ class FreeLookWindow;
 class GameList;
 class GBATASInputWindow;
 class GCTASInputWindow;
+class GeckoDialog;
 class GraphicsWindow;
 class HotkeyScheduler;
 class InfinityBaseWindow;
 class JITWidget;
+class LocalPlayersWindow;
 class LogConfigWidget;
 class LogWidget;
 class MappingWindow;
@@ -68,6 +71,10 @@ namespace X11Utils
 {
 class XRRConfiguration;
 }
+
+namespace Tag {
+  class TagSet;
+};
 
 class MainWindow final : public QMainWindow
 {
@@ -161,6 +168,7 @@ private:
   void ShowGeneralWindow();
   void ShowAudioWindow();
   void ShowControllersWindow();
+  void ShowLocalPlayersWindow();
   void ShowGraphicsWindow();
   void ShowFreeLookWindow();
   void ShowAboutDialog();
@@ -174,6 +182,7 @@ private:
   void ShowResourcePackManager();
   void ShowCheatsManager();
   void ShowRiivolutionBootWidget(const UICommon::GameFile& game);
+  void ShowGeckoCodes();
 
 #ifdef USE_RETRO_ACHIEVEMENTS
   void ShowAchievementsWindow();
@@ -237,6 +246,7 @@ private:
   bool m_is_screensaver_inhibited = false;
   u32 m_state_slot = 1;
   std::unique_ptr<BootParameters> m_pending_boot;
+  LocalPlayers::LocalPlayers::Player m_active_account;
 
   ControllersWindow* m_controllers_window = nullptr;
   SettingsWindow* m_settings_window = nullptr;
@@ -245,12 +255,15 @@ private:
   SkylanderPortalWindow* m_skylander_window = nullptr;
   InfinityBaseWindow* m_infinity_window = nullptr;
   MappingWindow* m_hotkey_window = nullptr;
+  GeckoDialog* m_gecko_dialog = nullptr;
+  LocalPlayersWindow* m_local_players_window = nullptr;
   FreeLookWindow* m_freelook_window = nullptr;
 
   HotkeyScheduler* m_hotkey_scheduler;
   NetPlayDialog* m_netplay_dialog;
   DiscordHandler* m_netplay_discord;
   NetPlaySetupDialog* m_netplay_setup_dialog;
+  std::map<int, Tag::TagSet> user_tagsets;
   static constexpr int num_gc_controllers = 4;
   std::array<GCTASInputWindow*, num_gc_controllers> m_gc_tas_input_windows{};
   std::array<GBATASInputWindow*, num_gc_controllers> m_gba_tas_input_windows{};
@@ -274,4 +287,6 @@ private:
   CheatsManager* m_cheats_manager;
   ScriptingWidget* m_scripting_widget;
   QByteArray m_render_widget_geometry;
+
+  Common::HttpRequest m_http{std::chrono::minutes{3}};
 };

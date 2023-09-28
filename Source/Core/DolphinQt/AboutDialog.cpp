@@ -14,12 +14,12 @@
 
 AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 {
-  setWindowTitle(tr("About Dolphin"));
+  setWindowTitle(tr("About Project Rio"));
   setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
   const QString text =
       QStringLiteral(R"(
-<p style='font-size:38pt; font-weight:400;'>Dolphin</p>
+<p style='font-size:38pt; font-weight:400;'>Project Rio</p>
 
 <p style='font-size:18pt;'>%VERSION_STRING%</p>
 
@@ -30,7 +30,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 </p>
 
 <p>
-%CHECK_FOR_UPDATES%: <a href='https://dolphin-emu.org/download'>dolphin-emu.org/download</a>
+%CHECK_FOR_UPDATES%: <a href='https://www.projectrio.online'>dolphin-emu.org/download</a>
 </p>
 
 <p>
@@ -61,7 +61,7 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
                    // is "free" as in "freedom" - it refers to certain properties of the
                    // software's license, not the software's price. (It is true that Dolphin
                    // can be downloaded at no cost, but that's not what this message says.)
-                   tr("Dolphin is a free and open-source GameCube and Wii emulator."))
+                   tr("Project Rio is a fork of Dolphin Emulator built for Mario Superstar Baseball and Mario Golf Toadstool Tour."))
           .replace(QStringLiteral("%GAMES_YOU_OWN%"),
                    tr("This software should not be used to play games you do not legally own."))
           .replace(QStringLiteral("%LICENSE%"), tr("License"))

@@ -13,11 +13,21 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <optional>
+#include <map>
 
 #include "Common/CommonTypes.h"
 
+#include "Core/HW/Memmap.h"
+
 struct BootParameters;
 struct WindowSystemInfo;
+
+namespace Tag {
+  class TagSet;
+};
+
+//GameName GetGameIDEnum(const std::string& gameName);
 
 namespace Core
 {
@@ -39,6 +49,12 @@ enum class State
   Running,
   Stopping,
   Starting,
+};
+
+enum class GameName : u8 {
+  UnknownGame = 0,
+  MarioBaseball = 1,
+  ToadstoolTour = 2,
 };
 
 // Console type values based on:
@@ -156,9 +172,12 @@ void SaveScreenShot(std::string_view name);
 // This displays messages in a user-visible way.
 void DisplayMessage(std::string message, int time_in_ms);
 
+    void RunRioFunctions(const Core::CPUThreadGuard& guard);
 void FrameUpdateOnCPUThread();
 void OnFrameEnd();
+bool IsGolfMode();
 void OnFrameBegin();
+
 
 // Run a function as the CPU thread.
 //
@@ -204,5 +223,83 @@ void DoFrameStep();
 void UpdateInputGate(bool require_focus, bool require_full_focus = false);
 
 void UpdateTitle();
+float u32ToFloat(u32 value);
+float ms_to_mph(float MetersPerSecond);
+float vectorMagnitude(float x, float y, float z);
+float RoundZ(float num);
+bool isNight();
+bool isDisableReplays();
+void MSSBCalculateNextGolfer(const Core::CPUThreadGuard& guard, int& nextGolfer);
+void MGTTCalculateNextGolfer(const Core::CPUThreadGuard& guard, int& nextGolfer);
 
+void AutoGolfMode(const Core::CPUThreadGuard& guard);
+void TrainingMode(const Core::CPUThreadGuard& guard);
+void DisplayPlayerNames(const Core::CPUThreadGuard& guard);
+void SetAvgPing(const Core::CPUThreadGuard& guard);
+void SetNetplayerUserInfo();
+void RunDraftTimer(const Core::CPUThreadGuard& guard);
+
+//enum class GameMode
+//{
+//  StarsOff,
+//  StarsOn,
+//  Custom,
+//};
+
+// auto GameMode = GameMode::Custom;
+
+using namespace Tag;
+
+void SetGameID(u32 gameID);
+std::optional<TagSet> GetActiveTagSet(bool netplay);
+void SetTagSet(std::optional<TagSet> tagset, bool netplay);
+bool isTagSetActive(std::optional<bool> netplay = std::nullopt);
+std::optional<std::vector<std::string>> GetTagSetGeckoString();
+
+static const u32 aOpponentPort = 0x802EBF92;
+static const u32 aFielderPort = 0x802EBF94;
+static const u32 aBatterPort = 0x802EBF95;
+static const u32 aIsField = 0x8089389B;
+static const u32 aIsInGame = 0x80871A6D;
+static const u32 aContactMade = 0x808909A1;
+static const u32 aContactFrame = 0x80890976;
+static const u32 aTypeOfContact = 0x808909A2;
+static const u32 aChargeUp = 0x80890968;
+static const u32 aChargeDown = 0x8089096C;
+static const u32 aBallAngle = 0x808926D4;
+static const u32 aBallPosition_X = 0x80890B38;
+static const u32 aBallPosition_Y = 0x80890B3C;
+static const u32 aBallPosition_Z = 0x80890B40;
+static const u32 aBallVelocity_X = 0x80890E50;
+static const u32 aBallVelocity_Y = 0x80890E54;
+static const u32 aBallVelocity_Z = 0x80890E58;
+static const u32 aPitchedBallVelocity_X = 0x808909D8;
+static const u32 aPitchedBallVelocity_Y = 0x808909DC;
+static const u32 aPitchedBallVelocity_Z = 0x808909E0;
+static const u32 aBarrelBatterPort = 0x80890971; // port of character at bat in barrel batter & bom-omb derby
+static const u32 aWallBallPort = 0x80890AD9; // port of character pitching in wall ball
+static const u32 aMinigameID = 0x808980DE;  // 3 == Barrel Batter; 2 == Wall Ball; 1 == Bom-omb Derby; 4 == Chain Chomp Sprint; 5 == Piranha Panic; 6 == Star Dash; 7 == Grand Prix
+static const u32 aWhoPaused = 0x8039D7D3; // 2 == fielder, 1 == batter
+//static const u32 aMatchStarted = 0x8036F3B8;  // bool for if a game is in session
+static const u32 aSceneId = 0x800E877F;
+
+// toadstooltour addresses
+static const u32 aDistanceRemainingToHole = 0x802D7368;
+static const u32 aShotAccuracy = 0x804ECD30;
+static const u32 aPowerMeterDistance = 0x804ECD54;
+static const u32 aCurrentShotAimAngle = 0x804ECD5C;  // radians
+static const u32 aSimLineEndpointX = 0x804ECD70;
+static const u32 aSimLineEndpointZ = 0x804ECD74;
+static const u32 aSimLineEndpointY = 0x804ECD78;
+static const u32 aPreShotVerticalAdjustment = 0x804ECDA0;
+static const u32 aPreShotHorizontalAdjustment = 0x804ECDA4;
+static const u32 aActiveShotVerticalAdjustment = 0x804ECDA8;
+static const u32 aActiveShotHorizontalAdjustment = 0x804ECDAC;
+static const u32 aCurrentGolfer = 0x804E68FB; // 0-3, indicates current golfing player index
+static const u32 aPlayer1Port = 0x804E6674; 
+static const u32 aPlayer2Port = 0x804E6675;
+static const u32 aPlayer3Port = 0x804E6676; 
+static const u32 aPlayer4Port = 0x804E6677; 
+static const u32 aPlayerCount = 0x804E68FA; // indicates total player count
+static const u32 aIsGolfMatch = 0x80162B5F; // 1 if golfing session active; 0 on menus
 }  // namespace Core

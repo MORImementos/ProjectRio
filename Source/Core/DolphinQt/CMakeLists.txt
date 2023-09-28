@@ -36,6 +36,8 @@ add_executable(dolphin-emu
   Achievements/AchievementSettingsWidget.h
   Achievements/AchievementsWindow.cpp
   Achievements/AchievementsWindow.h
+  Config/AddLocalPlayers.cpp
+  Config/AddLocalPlayers.h
   Config/ARCodeWidget.cpp
   Config/ARCodeWidget.h
   Config/CheatCodeEditor.cpp
@@ -102,6 +104,10 @@ add_executable(dolphin-emu
   Config/GraphicsModWarningWidget.h
   Config/InfoWidget.cpp
   Config/InfoWidget.h
+  Config/LocalPlayersWindow.cpp
+  Config/LocalPlayersWindow.h
+  Config/LocalPlayersWidget.cpp
+  Config/LocalPlayersWidget.h
   Config/LogConfigWidget.cpp
   Config/LogConfigWidget.h
   Config/LogWidget.cpp

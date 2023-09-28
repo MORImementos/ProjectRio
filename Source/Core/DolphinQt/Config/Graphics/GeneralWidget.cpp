@@ -86,6 +86,10 @@ void GeneralWidget::CreateWidgets()
   auto* m_options_layout = new QGridLayout();
 
   m_show_ping = new ConfigBool(tr("Show NetPlay Ping"), Config::GFX_SHOW_NETPLAY_PING);
+  m_show_player_names = new ConfigBool(tr("Show Player Names"), Config::GFX_SHOW_PLAYER_NAMES);
+  m_training_mode = new ConfigBool(tr("Training Mode v1.0"), Config::GFX_TRAINING_MODE);
+  m_draft_timer = new ConfigBool(tr("Draft Timer"), Config::GFX_DRAFT_TIMER);
+
   m_autoadjust_window_size =
       new ConfigBool(tr("Auto-Adjust Window Size"), Config::MAIN_RENDER_WINDOW_AUTOSIZE);
   m_show_messages = new ConfigBool(tr("Show NetPlay Messages"), Config::GFX_SHOW_NETPLAY_MESSAGES);
@@ -98,6 +102,11 @@ void GeneralWidget::CreateWidgets()
 
   m_options_layout->addWidget(m_show_messages, 0, 1);
   m_options_layout->addWidget(m_show_ping, 1, 1);
+
+  m_options_layout->addWidget(m_show_player_names, 3, 0);
+  m_options_layout->addWidget(m_training_mode, 3, 1);
+
+  m_options_layout->addWidget(m_draft_timer, 4, 0);
 
   // Other
   auto* shader_compilation_box = new QGroupBox(tr("Shader Compilation"));
@@ -252,6 +261,16 @@ void GeneralWidget::AddDescriptions()
                  "two or fewer cores, it is recommended to enable this option, as a large shader "
                  "queue may reduce frame rates.<br><br><dolphin_emphasis>Otherwise, if "
                  "unsure, leave this unchecked.</dolphin_emphasis>");
+  static const char TR_SHOW_PLAYER_NAMES[] =
+      QT_TR_NOOP("Shows the names of the players during a match. For Mario Baseball, the Batter and Fielder names are shown."
+                 " For Mario Golf, the current Golfer's name is shown. Be sure to assign Local Players to the correct port.");
+
+  static const char TR_TRAINING_MODE[] =
+      QT_TR_NOOP("Displays game information on screen in real-time. Useful for "
+                 "practice/testing/labbing purposes.");
+
+    static const char TR_DRAFT_TIMER[] =
+      QT_TR_NOOP("Shows how long the drafting phase of the game is taking on screen");
 
   m_backend_combo->SetTitle(tr("Backend"));
   m_backend_combo->SetDescription(tr(TR_BACKEND_DESCRIPTION));
@@ -266,6 +285,12 @@ void GeneralWidget::AddDescriptions()
   m_enable_fullscreen->SetDescription(tr(TR_FULLSCREEN_DESCRIPTION));
 
   m_show_ping->SetDescription(tr(TR_SHOW_NETPLAY_PING_DESCRIPTION));
+
+  m_show_player_names->SetDescription(tr(TR_SHOW_PLAYER_NAMES));
+
+  m_training_mode->SetDescription(tr(TR_TRAINING_MODE));
+
+  m_draft_timer->SetDescription(tr(TR_DRAFT_TIMER));
 
   m_autoadjust_window_size->SetDescription(tr(TR_AUTOSIZE_DESCRIPTION));
 

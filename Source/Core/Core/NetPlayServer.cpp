@@ -62,6 +62,7 @@
 #include "Core/NetPlayClient.h"  //for NetPlayUI
 #include "Core/NetPlayCommon.h"
 #include "Core/SyncIdentifier.h"
+#include "Core/LocalPlayersConfig.h"
 
 #include "DiscIO/Enums.h"
 #include "DiscIO/RiivolutionPatcher.h"
@@ -165,7 +166,7 @@ NetPlayServer::NetPlayServer(const u16 port, const bool forward_port, NetPlayUI*
     is_connected = true;
     m_do_loop = true;
     m_thread = std::thread(&NetPlayServer::ThreadFunc, this);
-    m_target_buffer_size = 5;
+    m_target_buffer_size = 8;
     m_chunked_data_thread = std::thread(&NetPlayServer::ChunkedDataThreadFunc, this);
 
 #ifdef USE_UPNP
@@ -445,7 +446,9 @@ ConnectionError NetPlayServer::OnConnect(ENetPeer* incoming_connection, sf::Pack
 
   received_packet >> new_player.revision;
   received_packet >> new_player.name;
-
+  received_packet >> new_player.riokey;
+  // previous line was if (StringUTF8CodePointCount(LocalPlayers::m_online_player.username) > MAX_NAME_LENGTH) ??
+  // did i mean to use the user's name here and not the connecting player?
   if (StringUTF8CodePointCount(new_player.name) > MAX_NAME_LENGTH)
     return ConnectionError::NameTooLong;
 
@@ -459,7 +462,7 @@ ConnectionError NetPlayServer::OnConnect(ENetPeer* incoming_connection, sf::Pack
   AssignNewUserAPad(new_player);
 
   // tell other players a new player joined
-  SendResponseToAllPlayers(MessageID::PlayerJoin, new_player.pid, new_player.name,
+  SendResponseToAllPlayers(MessageID::PlayerJoin, new_player.pid, new_player.name, new_player.riokey,
                            new_player.revision);
 
   // tell new client they connected and their ID
@@ -488,6 +491,19 @@ ConnectionError NetPlayServer::OnConnect(ENetPeer* incoming_connection, sf::Pack
     SendResponseToPlayer(new_player, MessageID::GameStatus, existing_player.second.pid,
                          static_cast<u8>(existing_player.second.game_status));
   }
+
+  // send Game Mode state
+  int tagset_id = m_tagset_id.has_value() ? m_tagset_id.value() : 0;
+  SendResponseToPlayer(new_player, MessageID::GameMode, m_tagset_id.has_value(), tagset_id);
+
+  // send night stadium state
+  SendResponseToPlayer(new_player, MessageID::NightStadium, m_current_night_value);
+
+  // send disable replays state
+  SendResponseToPlayer(new_player, MessageID::DisableReplays, m_current_disable_replays_value);
+
+  // send input authority state
+  SendResponseToPlayer(new_player, MessageID::HostInputAuthority, m_host_input_authority);
 
   if (Config::Get(Config::NETPLAY_ENABLE_QOS))
     new_player.qos_session = Common::QoSSession(new_player.socket);
@@ -665,6 +681,9 @@ void NetPlayServer::AdjustPadBufferSize(unsigned int size)
 {
   std::lock_guard lkg(m_crit.game);
 
+  if (size < 8)
+    size = 8;
+
   m_target_buffer_size = size;
 
   // not needed on clients with host input authority
@@ -677,6 +696,46 @@ void NetPlayServer::AdjustPadBufferSize(unsigned int size)
 
     SendAsyncToClients(std::move(spac));
   }
+}
+
+void NetPlayServer::AdjustNightStadium(const bool is_night)
+{
+  std::lock_guard lkg(m_crit.game);
+  m_current_night_value = is_night;
+
+  // tell clients to change disable replays box
+  sf::Packet spac;
+  spac << MessageID::NightStadium;
+  spac << m_current_night_value;
+
+  SendAsyncToClients(std::move(spac));
+}
+
+void NetPlayServer::AdjustReplays(const bool disable)
+{
+  std::lock_guard lkg(m_crit.game);
+  m_current_disable_replays_value = disable;
+
+  // tell clients to change ranked box
+  sf::Packet spac;
+  spac << MessageID::DisableReplays;
+  spac << m_current_disable_replays_value;
+
+  SendAsyncToClients(std::move(spac));
+}
+
+void NetPlayServer::SetTagSet(bool exists, int tagset_id)
+{
+  m_tagset_id = exists ? std::make_optional(tagset_id) : std::nullopt;
+
+  // tell clients about the new value
+  int temp_tagset_id = m_tagset_id.has_value() ? m_tagset_id.value() : 0;
+  sf::Packet spac;
+  spac << MessageID::GameMode;
+  spac << m_tagset_id.has_value();
+  spac << temp_tagset_id;
+
+  SendAsyncToClients(std::move(spac));
 }
 
 void NetPlayServer::SetHostInputAuthority(const bool enable)
@@ -764,6 +823,128 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
     spac << msg;
 
     SendToClients(spac, player.pid);
+  }
+  break;
+
+  case MessageID::PadSpectator:
+  {
+    bool spectator;
+    packet >> spectator;
+    auto padmap = this->GetPadMapping();
+    bool assigned = false;
+    for (int i = 0; i < padmap.size(); i++)
+    {
+      if (padmap[i] == player.pid)
+        assigned = true;
+      if (spectator && padmap[i] == player.pid)
+      {
+        padmap[i] = 0;
+      }
+      else if (!spectator && padmap[i] == 0 && !assigned)
+      {
+        padmap[i] = player.pid;
+        break;
+      }
+    }
+    this->SetPadMapping(padmap);
+  }
+  break;
+
+  case MessageID::SendCodes:
+  {
+    std::string codes;
+    packet >> codes;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::SendCodes;
+    spac << codes;
+
+    SendToClients(spac);
+  }
+  break;
+
+  case MessageID::CoinFlip:
+  {
+    int coinNum;
+    packet >> coinNum;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::CoinFlip;
+    spac << coinNum;
+
+    SendToClients(spac);
+  }
+  break;
+
+  case MessageID::NightStadium:
+  {
+    bool is_night;
+    packet >> is_night;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::NightStadium;
+    spac << is_night;
+
+    SendToClients(spac);
+  }
+  break;
+
+    case MessageID::GameID:
+  {
+    u32 id;
+    packet >> id;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::GameID;
+    spac << id;
+
+    SendToClients(spac);
+  }
+  break;
+
+  case MessageID::Stadium:
+  {
+    int stadium;
+    packet >> stadium;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::Stadium;
+    spac << stadium;
+
+    SendToClients(spac);
+  }
+  break;
+
+  case MessageID::DisableReplays:
+  {
+    bool disable;
+    packet >> disable;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::DisableReplays;
+    spac << disable;
+
+    SendToClients(spac);
+  }
+  break;
+
+  case MessageID::Course:
+  {
+    std::string message;
+    packet >> message;
+
+    // send codes to other clients
+    sf::Packet spac;
+    spac << MessageID::Course;
+    spac << message;
+
+    SendToClients(spac);
   }
   break;
 
@@ -908,6 +1089,7 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
 
   case MessageID::GolfRequest:
   {
+    NOTICE_LOG_FMT(NETPLAY, "Received GolfRequest");
     PlayerId pid;
     packet >> pid;
 
@@ -923,12 +1105,14 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
       sf::Packet spac;
       spac << MessageID::GolfPrepare;
       Send(m_players[pid].socket, spac);
+      NOTICE_LOG_FMT(NETPLAY, "Sent GolfPrepare to Player {}", pid);
     }
   }
   break;
 
   case MessageID::GolfRelease:
   {
+    NOTICE_LOG_FMT(NETPLAY, "Received GolfRelease");
     if (m_pending_golfer == 0)
       break;
 
@@ -936,11 +1120,13 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
     spac << MessageID::GolfSwitch;
     spac << m_pending_golfer;
     SendToClients(spac);
+    NOTICE_LOG_FMT(NETPLAY, "Sending GolfSwitch to clients. m_pending_golfer: {}", m_pending_golfer);
   }
   break;
 
   case MessageID::GolfAcquire:
   {
+    NOTICE_LOG_FMT(NETPLAY, "Received GolfRelease");
     if (m_pending_golfer == 0)
       break;
 
@@ -951,6 +1137,7 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
 
   case MessageID::GolfPrepare:
   {
+    NOTICE_LOG_FMT(NETPLAY, "Received GolfPrepare");
     if (m_pending_golfer == 0)
       break;
 
@@ -960,6 +1147,8 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
     spac << MessageID::GolfSwitch;
     spac << PlayerId{0};
     SendToClients(spac);
+    NOTICE_LOG_FMT(NETPLAY, "Sending GolfSwitch to all clients. m_pending_golfer: {}",
+                   m_pending_golfer);
   }
   break;
 
@@ -1080,6 +1269,21 @@ unsigned int NetPlayServer::OnData(sf::Packet& packet, Client& player)
       }
       m_timebase_by_frame.erase(frame);
     }
+  }
+  break;
+
+  case MessageID::Checksum:
+  {
+    u32 inChecksum;
+    u8 checksumId;
+    packet >> inChecksum;
+    packet >> checksumId;
+
+    sf::Packet spac;
+    spac << MessageID::Checksum;
+    spac << inChecksum;
+    spac << checksumId;
+    SendToClients(spac);
   }
   break;
 
@@ -1438,7 +1642,7 @@ bool NetPlayServer::SetupNetSettings()
       settings.savedata_load && Config::Get(Config::NETPLAY_SAVEDATA_SYNC_ALL_WII);
 
   settings.strict_settings_sync = Config::Get(Config::NETPLAY_STRICT_SETTINGS_SYNC);
-  settings.sync_codes = Config::Get(Config::NETPLAY_SYNC_CODES);
+  settings.sync_codes = true;
   settings.golf_mode = Config::Get(Config::NETPLAY_NETWORK_MODE) == "golf";
   settings.use_fma = DoAllPlayersHaveHardwareFMA();
   settings.hide_remote_gbas = Config::Get(Config::NETPLAY_HIDE_REMOTE_GBAS);
@@ -1520,7 +1724,7 @@ bool NetPlayServer::RequestStartGame()
   }
 
   // Check To Send Codes to Clients
-  if (m_settings.sync_codes && m_players.size() > 1)
+  if (m_players.size() > 1)
   {
     start_now = false;
     m_start_pending = true;

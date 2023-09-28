@@ -42,7 +42,7 @@ public:
                          StartGameCallback start_game_callback, QWidget* parent = nullptr);
   ~NetPlayDialog();
 
-  void show(std::string nickname, bool use_traversal);
+  void show(bool use_traversal);
   void reject() override;
 
   // NetPlayUI methods
@@ -53,6 +53,8 @@ public:
 
   void Update() override;
   void AppendChat(const std::string& msg) override;
+  void DisplayActiveGeckoCodes();
+  void UpdateLobbyLayout();
 
   void OnMsgChangeGame(const NetPlay::SyncIdentifier& sync_identifier,
                        const std::string& netplay_name) override;
@@ -71,6 +73,17 @@ public:
   void OnTraversalStateChanged(Common::TraversalClient::State state) override;
   void OnGameStartAborted() override;
   void OnGolferChanged(bool is_golfer, const std::string& golfer_name) override;
+
+  void StartingMsg(bool is_tagset) override;
+  void OnGameMode(std::string mode, std::string description, std::vector<std::string> tags) override;
+  void OnCoinFlipResult(int coinNum);
+  void OnRandomStadiumResult(int stadium);
+  void OnNightResult(bool is_night);
+  void OnDisableReplaysResult(bool disable);
+  void OnCourseResult(std::string message);
+  void OnActiveGeckoCodes(std::string codeStr);
+  bool IsSpectating() override;
+  void SetSpectating(bool spectating) override;
 
   void OnIndexAdded(bool success, const std::string error) override;
   void OnIndexRefreshFailed(const std::string error) override;
@@ -106,6 +119,11 @@ private:
   void CreateMainLayout();
   void ConnectWidgets();
   void OnChat();
+  void OnSpectatorToggle();
+  void OnCoinFlip();
+  void OnRandomStadium();
+  void OnRandomCourse(bool rand9);
+
   void OnStart();
   void DisplayMessage(const QString& msg, const std::string& color,
                       int duration = OSD::Duration::NORMAL);
@@ -138,6 +156,7 @@ private:
   QMenu* m_network_menu;
   QMenu* m_game_digest_menu;
   QMenu* m_other_menu;
+  //QMenu* m_gecko_menu;
   QPushButton* m_game_button;
   QPushButton* m_start_button;
   QLabel* m_buffer_label;
@@ -149,17 +168,28 @@ private:
   QAction* m_savedata_load_and_write_action;
   QAction* m_savedata_all_wii_saves_action;
 
-  QAction* m_sync_codes_action;
+  // QAction* m_sync_codes_action;
   QAction* m_record_input_action;
   QAction* m_strict_settings_sync_action;
-  QAction* m_host_input_authority_action;
+  // QAction* m_host_input_authority_action;
   QAction* m_golf_mode_action;
   QAction* m_golf_mode_overlay_action;
   QAction* m_fixed_delay_action;
   QAction* m_hide_remote_gbas_action;
+  QAction* m_night_stadium_action;
+  QAction* m_disable_music_action;
+  QAction* m_highlight_ball_shadow_action;
+  //QAction* m_never_cull_action;
   QPushButton* m_quit_button;
   QSplitter* m_splitter;
   QActionGroup* m_network_mode_group;
+  QPushButton* m_coin_flipper;
+  QPushButton* m_random_stadium;
+  QPushButton* m_random_9;
+  QPushButton* m_random_18;
+  QCheckBox* m_night_stadium;
+  QCheckBox* m_disable_replays;
+  QCheckBox* m_spectator_toggle;
 
   QGridLayout* m_main_layout;
   GameDigestDialog* m_game_digest_dialog;

@@ -59,6 +59,7 @@
 #include "DiscIO/Enums.h"
 #include "DiscIO/Volume.h"
 #include "DiscIO/VolumeWad.h"
+//#include <Core/LocalPlayersConfig.h>
 
 SConfig* SConfig::m_Instance;
 
@@ -83,6 +84,7 @@ void SConfig::Shutdown()
 SConfig::~SConfig()
 {
   SaveSettings();
+  //SaveLocalSettings();
 }
 
 void SConfig::SaveSettings()
@@ -93,9 +95,11 @@ void SConfig::SaveSettings()
 
 void SConfig::LoadSettings()
 {
+  //LoadLocalSettings();
   INFO_LOG_FMT(BOOT, "Loading Settings from {}", File::GetUserPath(F_DOLPHINCONFIG_IDX));
   Config::Load();
 }
+
 
 void SConfig::ResetRunningGameMetadata()
 {
@@ -394,6 +398,21 @@ DiscIO::Language SConfig::GetLanguageAdjustedForRegion(bool wii, DiscIO::Region 
   }
 
   return language;
+}
+
+bool SConfig::GameIsAllowed() const
+{
+  std::vector<std::string> games_list = {"GYQE01", "GFTE01"};
+  bool can_play = false;
+  std::string current_game = GetGameID();
+  for (std::string game : games_list)
+  {
+    if (current_game == game)
+    {
+      can_play = true;
+    }
+  }
+  return can_play;
 }
 
 Common::IniFile SConfig::LoadDefaultGameIni() const

@@ -16,6 +16,7 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <QScrollBar>
 
 #include "Common/FileUtil.h"
 #include "Common/IniFile.h"
@@ -74,25 +75,34 @@ void GeckoCodeWidget::CreateWidgets()
   m_code_description = new QTextEdit;
   m_code_description->setFont(monospace);
   m_code_description->setReadOnly(true);
-  m_code_description->setFixedHeight(line_height * 5);
+  m_code_description->setFixedHeight(line_height * 10);
+  m_code_description->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // disable auto-scrolling
 
-  m_code_view = new QTextEdit;
-  m_code_view->setFont(monospace);
-  m_code_view->setReadOnly(true);
-  m_code_view->setFixedHeight(line_height * 10);
+  //m_code_view = new QTextEdit;
+  //m_code_view->setFont(monospace);
+  //m_code_view->setReadOnly(true);
+  //m_code_view->setFixedHeight(line_height * 10);
 
   m_add_code = new NonDefaultQPushButton(tr("&Add New Code..."));
   m_edit_code = new NonDefaultQPushButton(tr("&Edit Code..."));
   m_remove_code = new NonDefaultQPushButton(tr("&Remove Code"));
   m_download_codes = new NonDefaultQPushButton(tr("Download Codes"));
 
-  m_download_codes->setToolTip(tr("Download Codes from the WiiRD Database"));
+  std::string download_codes_tooltip;
+  if (m_game_id == "GYQE01") {
+    download_codes_tooltip = "Download Mario Superstar Baseball Codes";
+  } else if (m_game_id == "GFTE01") {
+    download_codes_tooltip = "Download Mario Golf Toadstool Tour Codes";
+  } else {
+    "Download Codes from WiiRD Database";
+  }
+  m_download_codes->setToolTip(QString::fromStdString(download_codes_tooltip));
 
   m_code_list->setEnabled(!m_game_id.empty());
   m_name_label->setEnabled(!m_game_id.empty());
   m_creator_label->setEnabled(!m_game_id.empty());
   m_code_description->setEnabled(!m_game_id.empty());
-  m_code_view->setEnabled(!m_game_id.empty());
+  //m_code_view->setEnabled(!m_game_id.empty());
 
   m_add_code->setEnabled(!m_game_id.empty());
   m_edit_code->setEnabled(false);
@@ -120,7 +130,7 @@ void GeckoCodeWidget::CreateWidgets()
 
   layout->addLayout(info_layout);
   layout->addWidget(m_code_description);
-  layout->addWidget(m_code_view);
+  //layout->addWidget(m_code_view);
 
   QHBoxLayout* btn_layout = new QHBoxLayout;
 
@@ -130,7 +140,6 @@ void GeckoCodeWidget::CreateWidgets()
   btn_layout->addWidget(m_download_codes);
 
   layout->addLayout(btn_layout);
-
   setLayout(layout);
 }
 
@@ -178,10 +187,12 @@ void GeckoCodeWidget::OnSelectionChanged()
   for (const auto& line : code.notes)
     m_code_description->append(QString::fromStdString(line));
 
-  m_code_view->clear();
+  QScrollBar* scrollBar = m_code_description->verticalScrollBar();
+  scrollBar->setValue(scrollBar->minimum());  // set scroll bar to the top
+  //m_code_view->clear();
 
-  for (const auto& c : code.codes)
-    m_code_view->append(QString::fromStdString(c.original_line));
+  //for (const auto& c : code.codes)
+  //  m_code_view->append(QString::fromStdString(c.original_line));
 }
 
 void GeckoCodeWidget::OnItemChanged(QListWidgetItem* item)
@@ -192,6 +203,7 @@ void GeckoCodeWidget::OnItemChanged(QListWidgetItem* item)
   if (!m_restart_required)
     Gecko::SetActiveCodes(m_gecko_codes);
 
+  MakeEnabledList();
   SaveCodes();
 }
 
@@ -318,7 +330,8 @@ void GeckoCodeWidget::UpdateList()
 
   for (size_t i = 0; i < m_gecko_codes.size(); i++)
   {
-    const auto& code = m_gecko_codes[i];
+    //const auto& code = m_gecko_codes[i];
+    auto& code = m_gecko_codes[i];
 
     auto* item = new QListWidgetItem(QString::fromStdString(code.name)
                                          .replace(QStringLiteral("&lt;"), QChar::fromLatin1('<'))
@@ -331,8 +344,8 @@ void GeckoCodeWidget::UpdateList()
 
     m_code_list->addItem(item);
   }
-
   m_code_list->setDragDropMode(QAbstractItemView::InternalMove);
+  MakeEnabledList();
 }
 
 void GeckoCodeWidget::DownloadCodes()
@@ -354,15 +367,27 @@ void GeckoCodeWidget::DownloadCodes()
   }
 
   size_t added_count = 0;
+  size_t updated_count = 0;
 
   for (const auto& code : codes)
   {
     auto it = std::find(m_gecko_codes.begin(), m_gecko_codes.end(), code);
+    bool add_anyway = false; // i'm tired and will use this lazy fix
 
-    if (it == m_gecko_codes.end())
+    for (const auto& tcode : m_gecko_codes)
+    {
+      if (tcode.name == code.name && it == m_gecko_codes.end())
+      {
+        m_gecko_codes.erase(std::find(m_gecko_codes.begin(), m_gecko_codes.end(), tcode));
+        updated_count++;
+        add_anyway = true;
+      }
+    }
+
+    if (it == m_gecko_codes.end() || add_anyway)
     {
       m_gecko_codes.push_back(code);
-      added_count++;
+      if (!add_anyway) added_count++;
     }
   }
 
@@ -371,6 +396,35 @@ void GeckoCodeWidget::DownloadCodes()
 
   ModalMessageBox::information(
       this, tr("Download complete"),
-      tr("Downloaded %1 codes. (added %2)")
-          .arg(QString::number(codes.size()), QString::number(added_count)));
+      tr("Downloaded %1 codes. (added %2, updated %3)")
+                                   .arg(QString::number(codes.size()), QString::number(added_count),
+                                        QString::number(updated_count)));
+}
+
+void GeckoCodeWidget::MakeEnabledList()
+{
+  m_enabled_codes_list.clear();
+
+  for (auto code : m_gecko_codes)
+  {
+    if (code.enabled)
+    {
+      m_enabled_codes_list.push_back(code.name);
+    }
+  }
+
+  std::ostringstream enabled_codes_string;
+  if (!m_enabled_codes_list.empty())
+  {
+    std::copy(m_enabled_codes_list.begin(), m_enabled_codes_list.end() - 1,
+              std::ostream_iterator<std::string>(enabled_codes_string, "\n- "));
+    enabled_codes_string << m_enabled_codes_list.back();
+
+    m_code_list->setToolTip(tr("\nCurrently Enabled Codes: \n- %1")
+                                .arg(QString::fromStdString(enabled_codes_string.str())));
+  }
+  else
+  {
+    m_code_list->setToolTip(tr("\nNo Codes Currently Enabled"));
+  }
 }

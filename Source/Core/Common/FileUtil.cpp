@@ -838,6 +838,10 @@ static void RebuildUserDirectories(unsigned int dir_index)
     s_user_paths[D_WIIROOT_IDX] = s_user_paths[D_USER_IDX] + WII_USER_DIR DIR_SEP;
     s_user_paths[D_CONFIG_IDX] = s_user_paths[D_USER_IDX] + CONFIG_DIR DIR_SEP;
     s_user_paths[D_GAMESETTINGS_IDX] = s_user_paths[D_USER_IDX] + GAMESETTINGS_DIR DIR_SEP;
+    s_user_paths[D_STATFILES_IDX] = s_user_paths[D_USER_IDX] + STATFILES_DIR DIR_SEP;
+    s_user_paths[D_MSSBFILES_IDX] = s_user_paths[D_STATFILES_IDX] + MSSBFILES_DIR DIR_SEP;
+    s_user_paths[D_HUDFILES_IDX] = s_user_paths[D_USER_IDX] + HUDFILES_DIR DIR_SEP;
+    s_user_paths[D_STATELOGGER_IDX] = s_user_paths[D_USER_IDX] + STATELOGGERFILES_DIR DIR_SEP;
     s_user_paths[D_MAPS_IDX] = s_user_paths[D_USER_IDX] + MAPS_DIR DIR_SEP;
     s_user_paths[D_CACHE_IDX] = s_user_paths[D_USER_IDX] + CACHE_DIR DIR_SEP;
     s_user_paths[D_COVERCACHE_IDX] = s_user_paths[D_CACHE_IDX] + COVERCACHE_DIR DIR_SEP;
@@ -859,6 +863,7 @@ static void RebuildUserDirectories(unsigned int dir_index)
     s_user_paths[D_LOGS_IDX] = s_user_paths[D_USER_IDX] + LOGS_DIR DIR_SEP;
     s_user_paths[D_MAILLOGS_IDX] = s_user_paths[D_LOGS_IDX] + MAIL_LOGS_DIR DIR_SEP;
     s_user_paths[D_THEMES_IDX] = s_user_paths[D_USER_IDX] + THEMES_DIR DIR_SEP;
+    s_user_paths[D_TEXTUREPACKS_IDX] = s_user_paths[D_USER_IDX] + TEXTUREPACKS_DIR DIR_SEP;
     s_user_paths[D_STYLES_IDX] = s_user_paths[D_USER_IDX] + STYLES_DIR DIR_SEP;
     s_user_paths[D_PIPES_IDX] = s_user_paths[D_USER_IDX] + PIPES_DIR DIR_SEP;
     s_user_paths[D_WFSROOT_IDX] = s_user_paths[D_USER_IDX] + WFSROOT_DIR DIR_SEP;
@@ -868,6 +873,7 @@ static void RebuildUserDirectories(unsigned int dir_index)
     s_user_paths[D_GRAPHICSMOD_IDX] = s_user_paths[D_LOAD_IDX] + GRAPHICSMOD_DIR DIR_SEP;
     s_user_paths[D_WIISDCARDSYNCFOLDER_IDX] = s_user_paths[D_LOAD_IDX] + WIISDSYNC_DIR DIR_SEP;
     s_user_paths[F_DOLPHINCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + DOLPHIN_CONFIG;
+    s_user_paths[F_LOCALPLAYERSCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + LOCALPLAYERS_CONFIG;
     s_user_paths[F_GCPADCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + GCPAD_CONFIG;
     s_user_paths[F_WIIPADCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + WIIPAD_CONFIG;
     s_user_paths[F_GCKEYBOARDCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + GCKEYBOARD_CONFIG;
@@ -904,6 +910,7 @@ static void RebuildUserDirectories(unsigned int dir_index)
 
   case D_CONFIG_IDX:
     s_user_paths[F_DOLPHINCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + DOLPHIN_CONFIG;
+    s_user_paths[F_LOCALPLAYERSCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + LOCALPLAYERS_CONFIG;
     s_user_paths[F_GCPADCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + GCPAD_CONFIG;
     s_user_paths[F_GCKEYBOARDCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + GCKEYBOARD_CONFIG;
     s_user_paths[F_WIIPADCONFIG_IDX] = s_user_paths[D_CONFIG_IDX] + WIIPAD_CONFIG;
@@ -948,6 +955,7 @@ static void RebuildUserDirectories(unsigned int dir_index)
     s_user_paths[D_RIIVOLUTION_IDX] = s_user_paths[D_LOAD_IDX] + RIIVOLUTION_DIR DIR_SEP;
     s_user_paths[D_DYNAMICINPUT_IDX] = s_user_paths[D_LOAD_IDX] + DYNAMICINPUT_DIR DIR_SEP;
     s_user_paths[D_GRAPHICSMOD_IDX] = s_user_paths[D_LOAD_IDX] + GRAPHICSMOD_DIR DIR_SEP;
+    s_user_paths[D_TEXTUREPACKS_IDX] = s_user_paths[D_USER_IDX] + TEXTUREPACKS_DIR DIR_SEP;
     break;
   }
 }
@@ -957,6 +965,11 @@ static void RebuildUserDirectories(unsigned int dir_index)
 const std::string& GetUserPath(unsigned int dir_index)
 {
   return s_user_paths[dir_index];
+}
+
+std::string GetSysStylesPath()
+{
+  return GetSysDirectory() + STYLES_DIR + DIR_SEP + "Kuroi-master" + DIR_SEP;
 }
 
 // Sets a user directory path
@@ -1004,8 +1017,11 @@ std::string GetThemeDir(const std::string& theme_name)
   return GetSysDirectory() + THEMES_DIR "/" DEFAULT_THEME_DIR "/";
 }
 
-bool WriteStringToFile(const std::string& filename, std::string_view str)
+bool WriteStringToFile(const std::string& filename, std::string_view str, bool append)
 {
+  if (append){
+    return File::IOFile(filename, "ab").WriteBytes(str.data(), str.size());
+  }
   return File::IOFile(filename, "wb").WriteBytes(str.data(), str.size());
 }
 

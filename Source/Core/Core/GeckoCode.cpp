@@ -20,6 +20,8 @@
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/System.h"
+#include "Core/GeckoCodeConfig.h"
+#include "Core.h"
 
 namespace Gecko
 {
@@ -71,12 +73,31 @@ void SetActiveCodes(std::span<const GeckoCode> gcodes)
   std::lock_guard lk(s_active_codes_lock);
 
   s_active_codes.clear();
-  if (Config::Get(Config::MAIN_ENABLE_CHEATS))
+
+  std::optional<std::vector<std::string>> tagset_gecko_string = Core::GetTagSetGeckoString();
+
+  if (Core::isTagSetActive() == false)
   {
     s_active_codes.reserve(gcodes.size());
     std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
                  [](const GeckoCode& code) { return code.enabled; });
   }
+  else if (tagset_gecko_string.has_value())
+  {
+    GeckoCode gcode;
+    for (auto& line : tagset_gecko_string.value())
+    {
+      GeckoCode::Code new_code;
+      // TODO: support options
+      if (std::optional<GeckoCode::Code> code = DeserializeLine(line))
+        new_code = *code;
+      else
+        new_code.original_line = line;
+      gcode.codes.push_back(new_code);
+    }
+    s_active_codes.push_back(gcode);
+  }
+
   s_active_codes.shrink_to_fit();
 
   s_code_handler_installed = Installation::Uninstalled;
@@ -103,7 +124,7 @@ std::vector<GeckoCode> SetAndReturnActiveCodes(std::span<const GeckoCode> gcodes
   std::lock_guard lk(s_active_codes_lock);
 
   s_active_codes.clear();
-  if (Config::Get(Config::MAIN_ENABLE_CHEATS))
+  if (true)
   {
     s_active_codes.reserve(gcodes.size());
     std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
@@ -238,8 +259,6 @@ void Shutdown()
 
 void RunCodeHandler(const Core::CPUThreadGuard& guard)
 {
-  if (!Config::Get(Config::MAIN_ENABLE_CHEATS))
-    return;
 
   // NOTE: Need to release the lock because of GUI deadlocks with PanicAlert in HostWrite_*
   {

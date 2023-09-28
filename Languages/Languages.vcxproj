@@ -19,13 +19,18 @@
   <PropertyGroup>
     <msgfmt>..\Externals\gettext\msgfmt</msgfmt>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <PoFiles Include="po\*.po" />
     <MoFiles Include="@(PoFiles -> '$(OutDir)%(Filename).mo')" />
     <MoFilesDst Include="@(MoFiles -> '$(BinaryOutputDir)Languages\%(Filename)%(Extension)')" />
   </ItemGroup>
   <Target Name="MsgFmtCompile" BeforeTargets="BuildGenerateSources" Inputs="@(PoFiles)" Outputs="@(MoFiles)">
-    <Exec Command='$(msgfmt) -o "$(OutDir)%(PoFiles.Filename).mo" "@(PoFiles)"' />
+    <Exec Command="$(msgfmt) -o &quot;$(OutDir)%(PoFiles.Filename).mo&quot; &quot;@(PoFiles)&quot;" />
   </Target>
   <Target Name="MsgFmtCopy" AfterTargets="MsgFmtCompile" Inputs="@(MoFiles)" Outputs="@(MoFilesDst)">
     <Copy SourceFiles="@(MoFiles)" DestinationFiles="@(MoFilesDst)" SkipUnchangedFiles="true" />

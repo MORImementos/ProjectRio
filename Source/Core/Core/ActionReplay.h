@@ -43,7 +43,7 @@ struct ARCode
   bool user_defined = false;
 };
 
-void RunAllActive(const Core::CPUThreadGuard& cpu_guard);
+void RunAllActive(const Core::CPUThreadGuard& guard);
 
 void ApplyCodes(std::span<const ARCode> codes);
 void SetSyncedCodesAsActive();

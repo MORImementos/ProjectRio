@@ -1461,8 +1461,8 @@ void SetGraphicsConfig()
 void GetSettings()
 {
   using ExpansionInterface::EXIDeviceType;
-  const EXIDeviceType slot_a_type = Config::Get(Config::MAIN_SLOT_A);
-  const EXIDeviceType slot_b_type = Config::Get(Config::MAIN_SLOT_B);
+  const EXIDeviceType slot_a_type = Core::isTagSetActive() ? EXIDeviceType::None : Config::Get(Config::MAIN_SLOT_A);
+  const EXIDeviceType slot_b_type = Core::isTagSetActive() ? EXIDeviceType::None : Config::Get(Config::MAIN_SLOT_B);
   const bool slot_a_has_raw_memcard = slot_a_type == EXIDeviceType::MemoryCard;
   const bool slot_a_has_gci_folder = slot_a_type == EXIDeviceType::MemoryCardFolder;
   const bool slot_b_has_raw_memcard = slot_b_type == EXIDeviceType::MemoryCard;

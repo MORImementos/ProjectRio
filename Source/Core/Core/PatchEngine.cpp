@@ -35,6 +35,7 @@
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/System.h"
+#include "Core/Core.h"
 
 namespace PatchEngine
 {
@@ -216,15 +217,15 @@ void LoadPatches()
   LoadPatchSection("OnFrame", &s_on_frame, globalIni, localIni);
 
   // Check if I'm syncing Codes
-  if (Config::Get(Config::SESSION_CODE_SYNC_OVERRIDE))
+  if (Config::Get(Config::SESSION_CODE_SYNC_OVERRIDE) && !Core::isTagSetActive())
   {
     Gecko::SetSyncedCodesAsActive();
-    ActionReplay::SetSyncedCodesAsActive();
+    //ActionReplay::SetSyncedCodesAsActive();
   }
   else
   {
     Gecko::SetActiveCodes(Gecko::LoadCodes(globalIni, localIni));
-    ActionReplay::LoadAndApplyCodes(globalIni, localIni);
+    //ActionReplay::LoadAndApplyCodes(globalIni, localIni);
   }
 
   LoadSpeedhacks("Speedhacks", merged);
@@ -341,12 +342,15 @@ bool ApplyFramePatches()
     return false;
   }
 
-  ApplyPatches(guard, s_on_frame);
-  ApplyMemoryPatches(guard, s_on_frame_memory);
-
-  // Run the Gecko code handler
+  // we run the rio functions first, since we will want user's gecko codes to overwrite the built-in rio ones
+  Core::RunRioFunctions(guard);
   Gecko::RunCodeHandler(guard);
-  ActionReplay::RunAllActive(guard);
+  if (!Core::isTagSetActive())
+  {
+    ApplyPatches(guard, s_on_frame);
+    ApplyMemoryPatches(guard, s_on_frame_memory);
+    ActionReplay::RunAllActive(guard);
+  }
 
   return true;
 }

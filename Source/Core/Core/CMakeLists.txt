@@ -3,6 +3,16 @@ add_library(core
   AchievementManager.h
   ActionReplay.cpp
   ActionReplay.h
+  API/Controller.cpp
+  API/Controller.h
+  API/Events.cpp
+  API/Events.h
+  API/Memory.cpp
+  API/Memory.h
+  API/Gui.cpp
+  API/Gui.h
+  API/Registers.cpp
+  API/Registers.h
   ARDecrypt.cpp
   ARDecrypt.h
   Boot/AncastTypes.h
@@ -59,6 +69,8 @@ add_library(core
   Core.h
   CoreTiming.cpp
   CoreTiming.h
+  CPUThreadConfigCallback.cpp
+  CPUThreadConfigCallback.h
   Debugger/CodeTrace.cpp
   Debugger/CodeTrace.h
   Debugger/DebugInterface.h
@@ -378,6 +390,9 @@ add_library(core
   IOS/Network/KD/VFF/VFFUtil.cpp
   IOS/Network/KD/VFF/VFFUtil.h
   IOS/Network/KD/WC24File.h
+  IOS/Network/KD/Mail/MailCommon.h
+  IOS/Network/KD/Mail/WC24Send.cpp
+  IOS/Network/KD/Mail/WC24Send.h
   IOS/Network/MACUtils.cpp
   IOS/Network/MACUtils.h
   IOS/Network/NCD/Manage.cpp
@@ -621,6 +636,7 @@ PUBLIC
   MbedTLS::mbedtls
   pugixml
   RangeSet::RangeSet
+  scripting
   sfml-network
   videonull
   videoogl
@@ -628,6 +644,7 @@ PUBLIC
 
 PRIVATE
   cubeb::cubeb
+  imgui # TODO imgui shouldn't be here
   FatFs
   fmt::fmt
   LZO::LZO

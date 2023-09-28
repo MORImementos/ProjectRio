@@ -35,6 +35,7 @@
     <ClInclude Include="Common\Crypto\AES.h" />
     <ClInclude Include="Common\Crypto\bn.h" />
     <ClInclude Include="Common\Crypto\ec.h" />
+    <ClInclude Include="Common\Crypto\HMAC.h" />
     <ClInclude Include="Common\Crypto\SHA1.h" />
     <ClInclude Include="Common\Debug\MemoryPatches.h" />
     <ClInclude Include="Common\Debug\Threads.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="Common\Semaphore.h" />
     <ClInclude Include="Common\SettingsHandler.h" />
     <ClInclude Include="Common\SFMLHelper.h" />
+    <ClInclude Include="Common\SmallVector.h" />
     <ClInclude Include="Common\SocketContext.h" />
     <ClInclude Include="Common\SPSCQueue.h" />
     <ClInclude Include="Common\StringLiteral.h" />
@@ -162,6 +164,11 @@
     <ClInclude Include="Common\WorkQueueThread.h" />
     <ClInclude Include="Core\AchievementManager.h" />
     <ClInclude Include="Core\ActionReplay.h" />
+    <ClInclude Include="Core\API\Controller.h" />
+    <ClInclude Include="Core\API\Events.h" />
+    <ClInclude Include="Core\API\Memory.h" />
+    <ClInclude Include="Core\API\Gui.h" />
+    <ClInclude Include="Core\API\Registers.h" />
     <ClInclude Include="Core\ARDecrypt.h" />
     <ClInclude Include="Core\Boot\Boot.h" />
     <ClInclude Include="Core\Boot\DolReader.h" />
@@ -190,6 +197,7 @@
     <ClInclude Include="Core\ConfigManager.h" />
     <ClInclude Include="Core\Core.h" />
     <ClInclude Include="Core\CoreTiming.h" />
+    <ClInclude Include="Core\CPUThreadConfigCallback.h" />
     <ClInclude Include="Core\Debugger\CodeTrace.h" />
     <ClInclude Include="Core\Debugger\DebugInterface.h" />
     <ClInclude Include="Core\Debugger\Debugger_SymbolMap.h" />
@@ -360,6 +368,8 @@
     <ClInclude Include="Core\IOS\Network\KD\NWC24DL.h" />
     <ClInclude Include="Core\IOS\Network\KD\VFF\VFFUtil.h" />
     <ClInclude Include="Core\IOS\Network\KD\WC24File.h" />
+    <ClInclude Include="Core\IOS\Network\KD\Mail\MailCommon.h" />
+    <ClInclude Include="Core\IOS\Network\KD\Mail\WC24Send.h" />
     <ClInclude Include="Core\IOS\Network\MACUtils.h" />
     <ClInclude Include="Core\IOS\Network\NCD\Manage.h" />
     <ClInclude Include="Core\IOS\Network\NCD\WiiNetConfig.h" />
@@ -666,15 +676,18 @@
     <ClInclude Include="VideoCommon\GeometryShaderGen.h" />
     <ClInclude Include="VideoCommon\GeometryShaderManager.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsMod.h" />
+    <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsModAsset.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsModFeature.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsModGroup.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsTarget.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Config\GraphicsTargetGroup.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Constants.h" />
+    <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\Actions\CustomPipelineAction.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\Actions\MoveAction.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\Actions\PrintAction.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\Actions\ScaleAction.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\Actions\SkipAction.h" />
+    <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\CustomShaderCache.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\FBInfo.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\GraphicsModAction.h" />
     <ClInclude Include="VideoCommon\GraphicsModSystem\Runtime\GraphicsModActionData.h" />
@@ -760,6 +773,7 @@
     <ClCompile Include="Common\Crypto\AES.cpp" />
     <ClCompile Include="Common\Crypto\bn.cpp" />
     <ClCompile Include="Common\Crypto\ec.cpp" />
+    <ClCompile Include="Common\Crypto\HMAC.cpp" />
     <ClCompile Include="Common\Crypto\SHA1.cpp" />
     <ClCompile Include="Common\Debug\MemoryPatches.cpp" />
     <ClCompile Include="Common\Debug\Watches.cpp" />
@@ -809,6 +823,11 @@
     <ClCompile Include="Common\Version.cpp" />
     <ClCompile Include="Core\AchievementManager.cpp" />
     <ClCompile Include="Core\ActionReplay.cpp" />
+    <ClCompile Include="Core\API\Controller.cpp" />
+    <ClCompile Include="Core\API\Events.cpp" />
+    <ClCompile Include="Core\API\Memory.cpp" />
+    <ClCompile Include="Core\API\Gui.cpp" />
+    <ClCompile Include="Core\API\Registers.cpp" />
     <ClCompile Include="Core\ARDecrypt.cpp" />
     <ClCompile Include="Core\Boot\Boot_BS2Emu.cpp" />
     <ClCompile Include="Core\Boot\Boot_WiiWAD.cpp" />
@@ -836,6 +855,7 @@
     <ClCompile Include="Core\ConfigManager.cpp" />
     <ClCompile Include="Core\Core.cpp" />
     <ClCompile Include="Core\CoreTiming.cpp" />
+    <ClCompile Include="Core\CPUThreadConfigCallback.cpp" />
     <ClCompile Include="Core\Debugger\CodeTrace.cpp" />
     <ClCompile Include="Core\Debugger\Debugger_SymbolMap.cpp" />
     <ClCompile Include="Core\Debugger\Dump.cpp" />
@@ -1002,6 +1022,7 @@
     <ClCompile Include="Core\IOS\Network\KD\NWC24Config.cpp" />
     <ClCompile Include="Core\IOS\Network\KD\NWC24DL.cpp" />
     <ClCompile Include="Core\IOS\Network\KD\VFF\VFFUtil.cpp" />
+    <ClCompile Include="Core\IOS\Network\KD\Mail\WC24Send.cpp" />
     <ClCompile Include="Core\IOS\Network\MACUtils.cpp" />
     <ClCompile Include="Core\IOS\Network\NCD\Manage.cpp" />
     <ClCompile Include="Core\IOS\Network\NCD\WiiNetConfig.cpp" />
@@ -1282,14 +1303,17 @@
     <ClCompile Include="VideoCommon\GeometryShaderGen.cpp" />
     <ClCompile Include="VideoCommon\GeometryShaderManager.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsMod.cpp" />
+    <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsModAsset.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsModFeature.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsModGroup.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsTarget.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Config\GraphicsTargetGroup.cpp" />
+    <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\Actions\CustomPipelineAction.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\Actions\MoveAction.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\Actions\PrintAction.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\Actions\ScaleAction.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\Actions\SkipAction.cpp" />
+    <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\CustomShaderCache.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\FBInfo.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\GraphicsModActionFactory.cpp" />
     <ClCompile Include="VideoCommon\GraphicsModSystem\Runtime\GraphicsModManager.cpp" />

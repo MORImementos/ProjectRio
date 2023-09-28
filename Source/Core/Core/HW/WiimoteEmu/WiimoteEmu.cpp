@@ -20,6 +20,8 @@
 #include "Common/MsgHandler.h"
 
 #include "Core/Config/MainSettings.h"
+#include "Core/Config/SYSCONFSettings.h"
+#include "Core/ConfigManager.h"
 #include "Core/Core.h"
 #include "Core/HW/Wiimote.h"
 #include "Core/Movie.h"
@@ -202,6 +204,10 @@ void Wiimote::Reset()
   m_shake_state = {};
 
   m_imu_cursor_state = {};
+}
+
+WiimoteCommon::ButtonData Wiimote::GetButtonData() const {
+  return m_status.buttons;
 }
 
 Wiimote::Wiimote(const unsigned int index) : m_index(index), m_bt_device_index(index)

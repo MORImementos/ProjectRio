@@ -29,6 +29,7 @@
 #include "DolphinQt/Config/CheatWarningWidget.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/NonDefaultQPushButton.h"
+#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 
 #include "UICommon/GameFile.h"
 
@@ -213,6 +214,7 @@ void GeckoCodeWidget::AddCode()
 
   CheatCodeEditor ed(this);
   ed.SetGeckoCode(&code);
+  SetQWidgetWindowDecorations(&ed);
   if (ed.exec() == QDialog::Rejected)
     return;
 
@@ -231,6 +233,7 @@ void GeckoCodeWidget::EditCode()
 
   CheatCodeEditor ed(this);
   ed.SetGeckoCode(&m_gecko_codes[index]);
+  SetQWidgetWindowDecorations(&ed);
   if (ed.exec() == QDialog::Rejected)
     return;
 

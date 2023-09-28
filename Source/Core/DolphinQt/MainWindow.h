@@ -14,6 +14,7 @@
 #include "Core/Boot/Boot.h"
 #include "Core/LocalPlayersConfig.h"
 
+class QMenu;
 class QStackedWidget;
 class QString;
 
@@ -52,6 +53,7 @@ class SkylanderPortalWindow;
 class ThreadWidget;
 class ToolBar;
 class WatchWidget;
+class ScriptingWidget;
 class WiiTASInputWindow;
 struct WindowSystemInfo;
 
@@ -80,13 +82,15 @@ class MainWindow final : public QMainWindow
 
 public:
   explicit MainWindow(std::unique_ptr<BootParameters> boot_parameters,
-                      const std::string& movie_path);
+                      const std::string& movie_path,
+                      std::optional<std::string> script = std::optional<std::string>());
   ~MainWindow();
 
   void Show();
   WindowSystemInfo GetWindowSystemInfo() const;
 
   bool eventFilter(QObject* object, QEvent* event) override;
+  QMenu* createPopupMenu() override;
 
 signals:
   void ReadOnlyModeChanged(bool read_only);
@@ -219,6 +223,11 @@ private:
   void dropEvent(QDropEvent* event) override;
   QSize sizeHint() const override;
 
+#ifdef _WIN32
+  // This gets called for each event from the Windows message queue.
+  bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
+#endif
+
 #ifdef HAVE_XRANDR
   std::unique_ptr<X11Utils::XRRConfiguration> m_xrr_config;
 #endif
@@ -276,6 +285,7 @@ private:
   ThreadWidget* m_thread_widget;
   WatchWidget* m_watch_widget;
   CheatsManager* m_cheats_manager;
+  ScriptingWidget* m_scripting_widget;
   QByteArray m_render_widget_geometry;
 
   Common::HttpRequest m_http{std::chrono::minutes{3}};

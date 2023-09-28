@@ -95,7 +95,9 @@ public:
   template <typename T>
   static T ApplyDeadzone(T input, std::common_type_t<T> deadzone)
   {
-    return std::copysign(std::max(T{0}, std::abs(input) - deadzone) / (T{1} - deadzone), input);
+    auto arg = std::max(T{0}, std::abs(input) - deadzone) / (T{1} - deadzone);
+    return input <= -0 ? -arg : arg;
+    //return std::copysign(arg, input); // TODO error C2039: '_copysign': is not a member of 'std'
   }
 
   const std::string name;

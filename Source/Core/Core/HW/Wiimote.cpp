@@ -30,7 +30,7 @@ static std::array<u8, MAX_BBMOTES> s_last_connect_request_counter;
 namespace
 {
 static std::array<std::atomic<WiimoteSource>, MAX_BBMOTES> s_wiimote_sources;
-static std::optional<size_t> s_config_callback_id = std::nullopt;
+static std::optional<Config::ConfigChangedCallbackID> s_config_callback_id = std::nullopt;
 
 WiimoteSource GetSource(unsigned int index)
 {
@@ -241,4 +241,11 @@ void DoState(PointerWrap& p)
     }
   }
 }
+
+WiimoteCommon::ButtonData GetButtonData(int wiimote_num)
+{
+  return static_cast<WiimoteEmu::Wiimote*>(GetConfig()->GetController(wiimote_num))
+      ->GetButtonData();
+}
+
 }  // namespace Wiimote

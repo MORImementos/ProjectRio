@@ -11,6 +11,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/Logging/Log.h"
+#include "Core/API/Events.h"
 #include "Core/Core.h"
 #include "Core/Debugger/DebugInterface.h"
 #include "Core/PowerPC/Expression.h"
@@ -46,6 +47,7 @@ bool BreakPoints::IsTempBreakPoint(u32 address) const
 
 const TBreakPoint* BreakPoints::GetBreakpoint(u32 address) const
 {
+  API::GetEventHub().EmitEvent(API::Events::CodeBreakpoint{address});
   auto bp = std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
                          [address](const auto& bp_) { return bp_.address == address; });
 
@@ -371,6 +373,7 @@ bool TMemCheck::Action(Core::System& system, Core::DebugInterface* debug_interfa
   if (!is_enabled)
     return false;
 
+  API::GetEventHub().EmitEvent(API::Events::MemoryBreakpoint{write, addr, value});
   if (((write && is_break_on_write) || (!write && is_break_on_read)) &&
       EvaluateCondition(system, this->condition))
   {

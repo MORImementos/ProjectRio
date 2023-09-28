@@ -52,6 +52,11 @@ public:
 
   // UI
   void SetThemeName(const QString& theme_name);
+  void InitDefaultPalette();
+  void UpdateSystemDark();
+  void SetSystemDark(bool dark);
+  bool IsSystemDark();
+  bool IsThemeDark();
   void SetCurrentUserStyle(const QString& stylesheet_name);
   QString GetCurrentUserStyle() const;
 
@@ -149,6 +154,8 @@ public:
   bool IsNetworkVisible() const;
   void SetJITVisible(bool enabled);
   bool IsJITVisible() const;
+  void SetScriptingVisible(bool enabled);
+  bool IsScriptingVisible() const;
   QFont GetDebugFont() const;
   void SetDebugFont(QFont font);
 
@@ -197,6 +204,7 @@ signals:
   void MemoryVisibilityChanged(bool visible);
   void NetworkVisibilityChanged(bool visible);
   void JITVisibilityChanged(bool visible);
+  void ScriptingVisibilityChanged(bool visible);
   void DebugModeToggled(bool enabled);
   void DebugFontChanged(QFont font);
   void AutoUpdateTrackChanged(const QString& mode);

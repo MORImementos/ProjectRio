@@ -10,6 +10,7 @@
 #include "Common/ChunkFile.h"
 #include "Common/CommonTypes.h"
 #include "Common/Logging/Log.h"
+#include "Core/API/Events.h"
 #include "Core/Core.h"
 #include "Core/CoreTiming.h"
 #include "Core/HW/DVD/DVDInterface.h"
@@ -199,12 +200,14 @@ void ProcessorInterfaceManager::SetInterrupt(u32 cause_mask, bool set)
 
   if (set && !(m_interrupt_cause & cause_mask))
   {
+    API::GetEventHub().EmitEvent(API::Events::SetInterrupt{cause_mask});
     DEBUG_LOG_FMT(PROCESSORINTERFACE, "Setting Interrupt {} (set)",
                   Debug_GetInterruptName(cause_mask));
   }
 
   if (!set && (m_interrupt_cause & cause_mask))
   {
+    API::GetEventHub().EmitEvent(API::Events::ClearInterrupt{cause_mask});
     DEBUG_LOG_FMT(PROCESSORINTERFACE, "Setting Interrupt {} (clear)",
                   Debug_GetInterruptName(cause_mask));
   }

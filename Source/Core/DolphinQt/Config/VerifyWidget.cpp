@@ -20,7 +20,6 @@
 #include "DiscIO/Volume.h"
 #include "DiscIO/VolumeVerifier.h"
 #include "DolphinQt/QtUtils/ParallelProgressDialog.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/Settings.h"
 
 VerifyWidget::VerifyWidget(std::shared_ptr<DiscIO::Volume> volume) : m_volume(std::move(volume))
@@ -181,7 +180,6 @@ void VerifyWidget::Verify()
 
                    return result;
                  });
-  SetQWidgetWindowDecorations(progress.GetRaw());
   progress.GetRaw()->exec();
 
   std::optional<DiscIO::VolumeVerifier::Result> result = future.get();

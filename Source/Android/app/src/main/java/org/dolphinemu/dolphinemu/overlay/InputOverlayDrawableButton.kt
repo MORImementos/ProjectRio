@@ -18,15 +18,13 @@ import android.view.MotionEvent
  * @param pressedStateBitmap [Bitmap] to use with the pressed state Drawable.
  * @param legacyId           Legacy identifier (ButtonType) for this type of button.
  * @param control            Control ID for this type of button.
- * @param latching           Whether this button is latching.
  */
 class InputOverlayDrawableButton(
     res: Resources,
     defaultStateBitmap: Bitmap,
     pressedStateBitmap: Bitmap,
     val legacyId: Int,
-    val control: Int,
-    var latching: Boolean
+    val control: Int
 ) {
     var trackId: Int = -1
     private var previousTouchX = 0
@@ -95,9 +93,5 @@ class InputOverlayDrawableButton(
 
     fun setPressedState(isPressed: Boolean) {
         pressedState = isPressed
-    }
-
-    fun getPressedState(): Boolean {
-        return pressedState;
     }
 }

@@ -14,23 +14,18 @@ namespace VideoCommon
 class CustomTextureData
 {
 public:
-  struct ArraySlice
+  struct Level
   {
-    struct Level
-    {
-      std::vector<u8> data;
-      AbstractTextureFormat format = AbstractTextureFormat::RGBA8;
-      u32 width = 0;
-      u32 height = 0;
-      u32 row_length = 0;
-    };
-    std::vector<Level> m_levels;
+    std::vector<u8> data;
+    AbstractTextureFormat format = AbstractTextureFormat::RGBA8;
+    u32 width = 0;
+    u32 height = 0;
+    u32 row_length = 0;
   };
-  std::vector<ArraySlice> m_slices;
+  std::vector<Level> m_levels;
 };
 
 bool LoadDDSTexture(CustomTextureData* texture, const std::string& filename);
-bool LoadDDSTexture(CustomTextureData::ArraySlice::Level* level, const std::string& filename,
-                    u32 mip_level);
-bool LoadPNGTexture(CustomTextureData::ArraySlice::Level* level, const std::string& filename);
+bool LoadDDSTexture(CustomTextureData::Level* level, const std::string& filename, u32 mip_level);
+bool LoadPNGTexture(CustomTextureData::Level* level, const std::string& filename);
 }  // namespace VideoCommon

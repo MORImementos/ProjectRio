@@ -53,15 +53,9 @@ std::string LastStrerrorString()
 // This function might change the error code.
 std::string GetLastErrorString()
 {
-  return GetWin32ErrorString(GetLastError());
-}
-
-// Like GetLastErrorString() but if you have already queried the error code.
-std::string GetWin32ErrorString(DWORD error_code)
-{
   char error_message[BUFFER_SIZE];
 
-  FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, error_code,
+  FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, GetLastError(),
                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), error_message, BUFFER_SIZE, nullptr);
   return std::string(error_message);
 }

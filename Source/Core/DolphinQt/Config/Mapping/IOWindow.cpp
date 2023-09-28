@@ -6,8 +6,6 @@
 #include <optional>
 #include <thread>
 
-#include <QBrush>
-#include <QColor>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QHeaderView>
@@ -40,6 +38,7 @@
 
 namespace
 {
+// TODO: Make sure these functions return colors that will be visible in the current theme.
 QTextCharFormat GetSpecialCharFormat()
 {
   QTextCharFormat format;
@@ -50,10 +49,7 @@ QTextCharFormat GetSpecialCharFormat()
 QTextCharFormat GetLiteralCharFormat()
 {
   QTextCharFormat format;
-  if (Settings::Instance().IsThemeDark())
-    format.setForeground(QBrush{QColor(171, 132, 219)});
-  else
-    format.setForeground(QBrush{Qt::darkMagenta});
+  format.setForeground(QBrush{Qt::darkMagenta});
   return format;
 }
 
@@ -61,50 +57,35 @@ QTextCharFormat GetInvalidCharFormat()
 {
   QTextCharFormat format;
   format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-  if (Settings::Instance().IsThemeDark())
-    format.setUnderlineColor(QColor(255, 69, 0));
-  else
-    format.setUnderlineColor(Qt::darkRed);
+  format.setUnderlineColor(Qt::darkRed);
   return format;
 }
 
 QTextCharFormat GetControlCharFormat()
 {
   QTextCharFormat format;
-  if (Settings::Instance().IsThemeDark())
-    format.setForeground(QBrush{QColor(0, 220, 0)});
-  else
-    format.setForeground(QBrush{Qt::darkGreen});
+  format.setForeground(QBrush{Qt::darkGreen});
   return format;
 }
 
 QTextCharFormat GetVariableCharFormat()
 {
   QTextCharFormat format;
-  if (Settings::Instance().IsThemeDark())
-    format.setForeground(QBrush{QColor(226, 226, 0)});
-  else
-    format.setForeground(QBrush{Qt::darkYellow});
+  format.setForeground(QBrush{Qt::darkYellow});
   return format;
 }
 
 QTextCharFormat GetBarewordCharFormat()
 {
   QTextCharFormat format;
-  if (Settings::Instance().IsThemeDark())
-    format.setForeground(QBrush{QColor(66, 138, 255)});
-  else
-    format.setForeground(QBrush{Qt::darkBlue});
+  format.setForeground(QBrush{Qt::darkBlue});
   return format;
 }
 
 QTextCharFormat GetCommentCharFormat()
 {
   QTextCharFormat format;
-  if (Settings::Instance().IsThemeDark())
-    format.setForeground(QBrush{QColor(176, 176, 176)});
-  else
-    format.setForeground(QBrush{Qt::darkGray});
+  format.setForeground(QBrush{Qt::darkGray});
   return format;
 }
 }  // namespace

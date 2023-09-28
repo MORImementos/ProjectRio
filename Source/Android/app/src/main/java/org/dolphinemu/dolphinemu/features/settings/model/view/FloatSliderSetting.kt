@@ -6,15 +6,10 @@ import android.content.Context
 import org.dolphinemu.dolphinemu.features.settings.model.AbstractFloatSetting
 import org.dolphinemu.dolphinemu.features.settings.model.AbstractSetting
 import org.dolphinemu.dolphinemu.features.settings.model.Settings
-import java.math.BigDecimal
-import java.math.MathContext
+import kotlin.math.roundToInt
 
 open class FloatSliderSetting : SliderSetting {
-    protected val floatSetting: AbstractFloatSetting
-
-    val min: Float
-    val max: Float
-    val stepSize: Float
+    var floatSetting: AbstractFloatSetting
 
     override val setting: AbstractSetting
         get() = floatSetting
@@ -24,41 +19,29 @@ open class FloatSliderSetting : SliderSetting {
         setting: AbstractFloatSetting,
         titleId: Int,
         descriptionId: Int,
-        min: Float,
-        max: Float,
-        units: String,
-        stepSize: Float,
-        showDecimal: Boolean
-    ) : super(context, titleId, descriptionId, units, showDecimal) {
+        min: Int,
+        max: Int,
+        units: String?,
+        stepSize: Int
+    ) : super(context, titleId, descriptionId, min, max, units, stepSize) {
         floatSetting = setting
-        this.min = min
-        this.max = max
-        this.stepSize = stepSize
     }
 
     constructor(
         setting: AbstractFloatSetting,
         name: CharSequence,
-        description: CharSequence,
-        min: Float,
-        max: Float,
-        units: String,
-        stepSize: Float,
-        showDecimal: Boolean
-    ) : super(name, description, units, showDecimal) {
+        description: CharSequence?,
+        min: Int,
+        max: Int,
+        units: String?
+    ) : super(name, description, min, max, units) {
         floatSetting = setting
-        this.min = min
-        this.max = max
-        this.stepSize = stepSize
     }
 
-    open val selectedValue: Float
-        get() = floatSetting.float
+    override val selectedValue: Int
+        get() = floatSetting.float.roundToInt()
 
-    open fun setSelectedValue(settings: Settings, selection: Float) {
-        floatSetting.setFloat(
-            settings,
-            BigDecimal((selection).toDouble()).round(MathContext(3)).toFloat()
-        )
+    open fun setSelectedValue(settings: Settings?, selection: Float) {
+        floatSetting.setFloat(settings!!, selection)
     }
 }

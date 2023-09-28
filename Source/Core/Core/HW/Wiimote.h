@@ -8,7 +8,6 @@
 
 #include "Common/Common.h"
 #include "Common/CommonTypes.h"
-#include "WiimoteCommon/WiimoteReport.h"
 
 class InputConfig;
 class PointerWrap;
@@ -95,8 +94,6 @@ ControllerEmu::ControlGroup* GetDrawsomeTabletGroup(int number,
                                                     WiimoteEmu::DrawsomeTabletGroup group);
 ControllerEmu::ControlGroup* GetTaTaConGroup(int number, WiimoteEmu::TaTaConGroup group);
 ControllerEmu::ControlGroup* GetShinkansenGroup(int number, WiimoteEmu::ShinkansenGroup group);
-
-WiimoteCommon::ButtonData GetButtonData(int wiimote_num);
 }  // namespace Wiimote
 
 namespace WiimoteReal

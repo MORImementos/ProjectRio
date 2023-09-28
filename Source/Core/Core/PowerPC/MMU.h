@@ -128,16 +128,10 @@ public:
   static u16 HostRead_U16(const Core::CPUThreadGuard& guard, u32 address);
   static u32 HostRead_U32(const Core::CPUThreadGuard& guard, u32 address);
   static u64 HostRead_U64(const Core::CPUThreadGuard& guard, u32 address);
-  static s8 HostRead_S8(const Core::CPUThreadGuard& guard, u32 address);
-  static s16 HostRead_S16(const Core::CPUThreadGuard& guard, u32 address);
-  static s32 HostRead_S32(const Core::CPUThreadGuard& guard, u32 address);
-  static s64 HostRead_S64(const Core::CPUThreadGuard& guard, u32 address);
   static float HostRead_F32(const Core::CPUThreadGuard& guard, u32 address);
   static double HostRead_F64(const Core::CPUThreadGuard& guard, u32 address);
   static u32 HostRead_Instruction(const Core::CPUThreadGuard& guard, u32 address);
   static std::string HostGetString(const Core::CPUThreadGuard& guard, u32 address, size_t size = 0);
-  static std::u16string HostGetU16String(const Core::CPUThreadGuard& guard, u32 address,
-                                         size_t size = 0);
 
   // Try to read a value from emulated memory at the given address in the given memory space.
   // If the read succeeds, the returned value will be present and the ReadResult contains the read
@@ -175,10 +169,6 @@ public:
   static void HostWrite_U16(const Core::CPUThreadGuard& guard, u32 var, u32 address);
   static void HostWrite_U32(const Core::CPUThreadGuard& guard, u32 var, u32 address);
   static void HostWrite_U64(const Core::CPUThreadGuard& guard, u64 var, u32 address);
-  static void HostWrite_S8(const Core::CPUThreadGuard& guard, s8 var, u32 address);
-  static void HostWrite_S16(const Core::CPUThreadGuard& guard, s16 var, u32 address);
-  static void HostWrite_S32(const Core::CPUThreadGuard& guard, s32 var, u32 address);
-  static void HostWrite_S64(const Core::CPUThreadGuard& guard, s64 var, u32 address);
   static void HostWrite_F32(const Core::CPUThreadGuard& guard, float var, u32 address);
   static void HostWrite_F64(const Core::CPUThreadGuard& guard, double var, u32 address);
 
@@ -273,13 +263,6 @@ private:
     PAGE_FAULT,
   };
 
-  enum class TranslateCondition
-  {
-    Always,
-    MsrDrSet,
-    Never
-  };
-
   struct TranslateAddressResult
   {
     u32 address;
@@ -309,8 +292,8 @@ private:
   template <const XCheckTLBFlag flag>
   TranslateAddressResult TranslateAddress(u32 address);
 
-  template <const XCheckTLBFlag flag>
-  TranslateAddressResult TranslatePageAddress(const EffectiveAddress address, bool* wi);
+  TranslateAddressResult TranslatePageAddress(const EffectiveAddress address,
+                                              const XCheckTLBFlag flag, bool* wi);
 
   void GenerateDSIException(u32 effective_address, bool write);
   void GenerateISIException(u32 effective_address);
@@ -320,10 +303,9 @@ private:
   void UpdateBATs(BatTable& bat_table, u32 base_spr);
   void UpdateFakeMMUBat(BatTable& bat_table, u32 start_addr);
 
-  template <XCheckTLBFlag flag, typename T,
-            TranslateCondition translate_if = TranslateCondition::MsrDrSet>
+  template <XCheckTLBFlag flag, typename T, bool never_translate = false>
   T ReadFromHardware(u32 em_address);
-  template <XCheckTLBFlag flag, TranslateCondition translate_if = TranslateCondition::MsrDrSet>
+  template <XCheckTLBFlag flag, bool never_translate = false>
   void WriteToHardware(u32 em_address, const u32 data, const u32 size);
   template <XCheckTLBFlag flag>
   bool IsRAMAddress(u32 address, bool translate);

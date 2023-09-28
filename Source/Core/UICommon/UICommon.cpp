@@ -62,7 +62,7 @@
 
 namespace UICommon
 {
-static Config::ConfigChangedCallbackID s_config_changed_callback_id;
+static size_t s_config_changed_callback_id;
 
 static void CreateDumpPath(std::string path)
 {

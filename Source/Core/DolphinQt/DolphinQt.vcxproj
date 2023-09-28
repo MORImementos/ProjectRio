@@ -14,7 +14,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VSPropsDir)Base.props" />
     <Import Project="$(VSPropsDir)Base.Dolphin.props" />
-    <Import Project="$(VSPropsDir)PyEmbed.props" />
     <Import Project="$(VSPropsDir)QtCompile.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -29,7 +28,6 @@
       <AdditionalIncludeDirectories>$(ProjectDir)GameList;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ProjectDir)NetPlay;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ProjectDir)QtUtils;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ProjectDir)Scripting;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ProjectDir)Settings;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ProjectDir)TAS;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ProjectDir)VideoInterface;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -134,7 +132,6 @@
     <ClCompile Include="Config\ToolTipControls\BalloonTip.cpp" />
     <ClCompile Include="Config\ToolTipControls\ToolTipCheckBox.cpp" />
     <ClCompile Include="Config\ToolTipControls\ToolTipComboBox.cpp" />
-    <ClCompile Include="Config\ToolTipControls\ToolTipPushButton.cpp" />
     <ClCompile Include="Config\ToolTipControls\ToolTipRadioButton.cpp" />
     <ClCompile Include="Config\ToolTipControls\ToolTipSlider.cpp" />
     <ClCompile Include="Config\ToolTipControls\ToolTipSpinBox.cpp" />
@@ -196,7 +193,6 @@
     <ClCompile Include="QtUtils\ModalMessageBox.cpp" />
     <ClCompile Include="QtUtils\NonDefaultQPushButton.cpp" />
     <ClCompile Include="QtUtils\PartiallyClosableTabWidget.cpp" />
-    <ClCompile Include="QtUtils\SetWindowDecorations.cpp" />
     <ClCompile Include="QtUtils\UTF8CodePointCountValidator.cpp" />
     <ClCompile Include="QtUtils\WindowActivationEventFilter.cpp" />
     <ClCompile Include="QtUtils\WrapInScrollArea.cpp" />
@@ -204,8 +200,6 @@
     <ClCompile Include="ResourcePackManager.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="RiivolutionBootWidget.cpp" />
-    <ClCompile Include="Scripting/ScriptingWidget.cpp" />
-    <ClCompile Include="Scripting/ScriptsListModel.cpp" />
     <ClCompile Include="SearchBar.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Settings\AdvancedPane.cpp" />
@@ -340,7 +334,6 @@
     <QtMoc Include="Config\ToolTipControls\BalloonTip.h" />
     <ClInclude Include="Config\ToolTipControls\ToolTipCheckBox.h" />
     <ClInclude Include="Config\ToolTipControls\ToolTipComboBox.h" />
-    <ClInclude Include="Config\ToolTipControls\ToolTipPushButton.h" />
     <ClInclude Include="Config\ToolTipControls\ToolTipRadioButton.h" />
     <ClInclude Include="Config\ToolTipControls\ToolTipSlider.h" />
     <ClInclude Include="Config\ToolTipControls\ToolTipSpinBox.h" />
@@ -394,12 +387,10 @@
     <QtMoc Include="QtUtils\FileOpenEventFilter.h" />
     <QtMoc Include="QtUtils\ParallelProgressDialog.h" />
     <QtMoc Include="QtUtils\PartiallyClosableTabWidget.h" />
-    <ClInclude Include="QtUtils\SetWindowDecorations.h" />
     <QtMoc Include="QtUtils\UTF8CodePointCountValidator.h" />
     <QtMoc Include="QtUtils\WindowActivationEventFilter.h" />
     <QtMoc Include="RenderWidget.h" />
     <QtMoc Include="RiivolutionBootWidget.h" />
-    <QtMoc Include="Scripting/ScriptingWidget.h" />
     <QtMoc Include="SearchBar.h" />
     <QtMoc Include="Settings.h" />
     <QtMoc Include="Settings\AdvancedPane.h" />
@@ -431,10 +422,6 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="qt6.natvis" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="Styles\Dark\dark.qss" />
-    <QtRcc Include="Styles\Dark\dark.qrc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(CoreDir)DolphinLib.vcxproj">

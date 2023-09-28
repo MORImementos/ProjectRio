@@ -23,7 +23,6 @@
 #include "Common/Logging/Log.h"
 #include "Common/MsgHandler.h"
 
-#include "Core/API/Gui.h"
 #include "Core/ConfigManager.h"
 #include "Core/System.h"
 
@@ -32,8 +31,6 @@
 #include "VideoCommon/VideoBackendBase.h"
 #include "VideoCommon/VideoCommon.h"
 #include "VideoCommon/VideoConfig.h"
-
-#include <Core/API/Events.h>
 
 std::unique_ptr<Renderer> g_renderer;
 

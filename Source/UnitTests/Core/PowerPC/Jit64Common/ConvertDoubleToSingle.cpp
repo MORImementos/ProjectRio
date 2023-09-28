@@ -5,9 +5,7 @@
 #include <tuple>
 
 #include "Common/CommonTypes.h"
-#include "Common/ScopeGuard.h"
 #include "Common/x64ABI.h"
-#include "Core/Core.h"
 #include "Core/PowerPC/Gekko.h"
 #include "Core/PowerPC/Interpreter/Interpreter_FPUtils.h"
 #include "Core/PowerPC/Jit64/Jit.h"
@@ -54,9 +52,6 @@ public:
 
 TEST(Jit64, ConvertDoubleToSingle)
 {
-  Core::DeclareAsCPUThread();
-  Common::ScopeGuard cpu_thread_guard([] { Core::UndeclareAsCPUThread(); });
-
   TestCommonAsmRoutines routines(Core::System::GetInstance());
 
   for (const u64 input : double_test_values)

@@ -9,7 +9,6 @@
 #include <string>
 
 #include "Common/Common.h"
-#include "Common/Config/Config.h"
 
 #include "Core/HW/WiimoteCommon/WiimoteReport.h"
 
@@ -161,8 +160,6 @@ public:
   WiimoteCommon::ButtonData GetCurrentlyPressedButtons() override;
 
   void Reset();
-
-  WiimoteCommon::ButtonData GetButtonData() const;
 
   void DoState(PointerWrap& p);
 
@@ -346,6 +343,6 @@ private:
 
   IMUCursorState m_imu_cursor_state;
 
-  Config::ConfigChangedCallbackID m_config_changed_callback_id;
+  size_t m_config_changed_callback_id;
 };
 }  // namespace WiimoteEmu

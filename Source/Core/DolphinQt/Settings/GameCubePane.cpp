@@ -39,7 +39,6 @@
 #include "DolphinQt/QtUtils/DolphinFileDialog.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/NonDefaultQPushButton.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/QtUtils/SignalBlocking.h"
 #include "DolphinQt/Settings.h"
 #include "DolphinQt/Settings/BroadbandAdapterSettingsDialog.h"
@@ -380,32 +379,22 @@ void GameCubePane::OnConfigPressed(ExpansionInterface::Slot slot)
     BrowseAGPRom(slot);
     return;
   case ExpansionInterface::EXIDeviceType::Microphone:
-  {
     // TODO: convert MappingWindow to use Slot?
-    MappingWindow dialog(this, MappingWindow::Type::MAPPING_GC_MICROPHONE, static_cast<int>(slot));
-    SetQWidgetWindowDecorations(&dialog);
-    dialog.exec();
+    MappingWindow(this, MappingWindow::Type::MAPPING_GC_MICROPHONE, static_cast<int>(slot)).exec();
     return;
-  }
   case ExpansionInterface::EXIDeviceType::Ethernet:
   {
-    BroadbandAdapterSettingsDialog dialog(this, BroadbandAdapterSettingsDialog::Type::Ethernet);
-    SetQWidgetWindowDecorations(&dialog);
-    dialog.exec();
+    BroadbandAdapterSettingsDialog(this, BroadbandAdapterSettingsDialog::Type::Ethernet).exec();
     return;
   }
   case ExpansionInterface::EXIDeviceType::EthernetXLink:
   {
-    BroadbandAdapterSettingsDialog dialog(this, BroadbandAdapterSettingsDialog::Type::XLinkKai);
-    SetQWidgetWindowDecorations(&dialog);
-    dialog.exec();
+    BroadbandAdapterSettingsDialog(this, BroadbandAdapterSettingsDialog::Type::XLinkKai).exec();
     return;
   }
   case ExpansionInterface::EXIDeviceType::EthernetBuiltIn:
   {
-    BroadbandAdapterSettingsDialog dialog(this, BroadbandAdapterSettingsDialog::Type::BuiltIn);
-    SetQWidgetWindowDecorations(&dialog);
-    dialog.exec();
+    BroadbandAdapterSettingsDialog(this, BroadbandAdapterSettingsDialog::Type::BuiltIn).exec();
     return;
   }
   default:

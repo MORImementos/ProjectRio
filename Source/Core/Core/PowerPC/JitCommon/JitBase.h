@@ -3,17 +3,13 @@
 
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <map>
 #include <unordered_set>
-#include <utility>
 
 #include "Common/BitSet.h"
 #include "Common/CommonTypes.h"
-#include "Common/Config/ConfigInfo.h"
 #include "Common/x64Emitter.h"
-#include "Core/CPUThreadConfigCallback.h"
 #include "Core/ConfigManager.h"
 #include "Core/MachineContext.h"
 #include "Core/PowerPC/CPUCoreBase.h"
@@ -133,7 +129,7 @@ protected:
   PPCAnalyst::CodeBuffer m_code_buffer;
   PPCAnalyst::PPCAnalyzer analyzer;
 
-  CPUThreadConfigCallback::ConfigChangedCallbackID m_registered_config_callback_id;
+  size_t m_registered_config_callback_id;
   bool bJITOff = false;
   bool bJITLoadStoreOff = false;
   bool bJITLoadStorelXzOff = false;
@@ -148,22 +144,20 @@ protected:
   bool bJITBranchOff = false;
   bool bJITRegisterCacheOff = false;
   bool m_enable_debugging = false;
-  bool m_enable_branch_following = false;
   bool m_enable_float_exceptions = false;
   bool m_enable_div_by_zero_exceptions = false;
   bool m_low_dcbz_hack = false;
   bool m_fprf = false;
   bool m_accurate_nans = false;
   bool m_fastmem_enabled = false;
+  bool m_mmu_enabled = false;
+  bool m_pause_on_panic_enabled = false;
   bool m_accurate_cpu_cache_enabled = false;
 
   bool m_enable_blr_optimization = false;
   bool m_cleanup_after_stackfault = false;
   u8* m_stack_guard = nullptr;
 
-  static const std::array<std::pair<bool JitBase::*, const Config::Info<bool>*>, 22> JIT_SETTINGS;
-
-  bool DoesConfigNeedRefresh();
   void RefreshConfig();
 
   void InitBLROptimization();
@@ -172,6 +166,8 @@ protected:
   void CleanUpAfterStackFault();
 
   bool CanMergeNextInstructions(int count) const;
+
+  void UpdateMemoryAndExceptionOptions();
 
   bool ShouldHandleFPExceptionForInstruction(const PPCAnalyst::CodeOp* op);
 

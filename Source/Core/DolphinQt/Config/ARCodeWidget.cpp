@@ -22,7 +22,6 @@
 #include "DolphinQt/Config/CheatCodeEditor.h"
 #include "DolphinQt/Config/CheatWarningWidget.h"
 #include "DolphinQt/QtUtils/NonDefaultQPushButton.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 
 #include "UICommon/GameFile.h"
 
@@ -231,7 +230,6 @@ void ARCodeWidget::OnCodeAddClicked()
 
   CheatCodeEditor ed(this);
   ed.SetARCode(&ar);
-  SetQWidgetWindowDecorations(&ed);
   if (ed.exec() == QDialog::Rejected)
     return;
 
@@ -255,7 +253,6 @@ void ARCodeWidget::OnCodeEditClicked()
   {
     ed.SetARCode(&current_ar);
 
-    SetQWidgetWindowDecorations(&ed);
     if (ed.exec() == QDialog::Rejected)
       return;
   }
@@ -264,7 +261,6 @@ void ARCodeWidget::OnCodeEditClicked()
     ActionReplay::ARCode ar = current_ar;
     ed.SetARCode(&ar);
 
-    SetQWidgetWindowDecorations(&ed);
     if (ed.exec() == QDialog::Rejected)
       return;
 

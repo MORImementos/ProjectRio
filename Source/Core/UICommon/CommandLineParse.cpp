@@ -105,16 +105,6 @@ std::unique_ptr<optparse::OptionParser> CreateParser(ParserOptions options)
       .metavar("<file>")
       .type("string")
       .help("Load the initial save state");
-  parser->add_option("--script")
-      .action("store")
-      .metavar("<file>")
-      .type("string")
-      .help("Execute the supplied script");
-  parser->add_option("--no-python-subinterpreters")
-      .action("store_true")
-      .dest("no_python_subinterpreters")
-      .set_default("0")
-      .help("Disables python subinterpreters. Makes some python libraries like numpy work, but cannot run multiple scripts at the same time.");
 
   if (options == ParserOptions::IncludeGUIOptions)
   {

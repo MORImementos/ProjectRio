@@ -16,9 +16,6 @@
 // The status array is 32 bits and every character takes 2 bits.
 // 32/2 = 16
 constexpr u8 MAX_SKYLANDERS = 16;
-constexpr u8 NUM_SKYLANDER_GAMES = 5;
-constexpr u8 NUM_SKYLANDER_TYPES = 10;
-constexpr u8 NUM_SKYLANDER_ELEMENTS = 11;
 
 namespace IOS::HLE::USB
 {
@@ -28,24 +25,12 @@ enum class Game
   Giants,
   SwapForce,
   TrapTeam,
-  Superchargers
-};
-enum class Type
-{
-  Skylander = 1,
-  Giant,
-  Swapper,
-  TrapMaster,
-  Mini,
-  Item,
-  Trophy,
-  Vehicle,
-  Trap,
-  Unknown
+  Superchargers,
+  Other,
 };
 enum class Element
 {
-  Magic = 1,
+  Magic,
   Fire,
   Air,
   Life,
@@ -53,17 +38,14 @@ enum class Element
   Earth,
   Water,
   Tech,
-  Dark,
-  Light,
   Other
 };
 
 struct SkyData
 {
   const char* name = "";
-  Game game = Game::SpyrosAdv;
+  Game game = Game::Other;
   Element element = Element::Other;
-  Type type = Type::Unknown;
 };
 
 extern const std::map<const std::pair<const u16, const u16>, SkyData> list_skylanders;

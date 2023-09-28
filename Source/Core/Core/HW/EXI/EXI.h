@@ -72,6 +72,7 @@ public:
   void Init(const Sram* override_sram);
   void Shutdown();
   void DoState(PointerWrap& p);
+  void PauseAndLock(bool doLock, bool unpauseOnUnlock);
 
   void RegisterMMIO(MMIO::Mapping* mmio, u32 base);
 

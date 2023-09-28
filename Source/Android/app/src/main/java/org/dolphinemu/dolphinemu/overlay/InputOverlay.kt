@@ -154,10 +154,10 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                             event.getY(pointerIndex).toInt()
                         )
                     ) {
-                        button.setPressedState(if (button.latching) !button.getPressedState() else true)
+                        button.setPressedState(true)
                         button.trackId = event.getPointerId(pointerIndex)
                         pressed = true
-                        InputOverrider.setControlState(controllerIndex, button.control, if (button.getPressedState()) 1.0 else 0.0)
+                        InputOverrider.setControlState(controllerIndex, button.control, 1.0)
 
                         val analogControl = getAnalogControlForTrigger(button.control)
                         if (analogControl >= 0)
@@ -173,9 +173,8 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                 MotionEvent.ACTION_POINTER_UP -> {
                     // If a pointer ends, release the button it was pressing.
                     if (button.trackId == event.getPointerId(pointerIndex)) {
-                        if (!button.latching)
-                            button.setPressedState(false)
-                        InputOverrider.setControlState(controllerIndex, button.control, if (button.getPressedState()) 1.0 else 0.0)
+                        button.setPressedState(false)
+                        InputOverrider.setControlState(controllerIndex, button.control, 0.0)
 
                         val analogControl = getAnalogControlForTrigger(button.control)
                         if (analogControl >= 0)
@@ -498,8 +497,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_a_pressed,
                     ButtonType.BUTTON_A,
                     ControlId.GCPAD_A_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_0.boolean
+                    orientation
                 )
             )
         }
@@ -511,8 +509,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_b_pressed,
                     ButtonType.BUTTON_B,
                     ControlId.GCPAD_B_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_1.boolean
+                    orientation
                 )
             )
         }
@@ -524,8 +521,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_x_pressed,
                     ButtonType.BUTTON_X,
                     ControlId.GCPAD_X_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_2.boolean
+                    orientation
                 )
             )
         }
@@ -537,8 +533,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_y_pressed,
                     ButtonType.BUTTON_Y,
                     ControlId.GCPAD_Y_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_3.boolean
+                    orientation
                 )
             )
         }
@@ -550,8 +545,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_z_pressed,
                     ButtonType.BUTTON_Z,
                     ControlId.GCPAD_Z_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_4.boolean
+                    orientation
                 )
             )
         }
@@ -563,8 +557,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_start_pressed,
                     ButtonType.BUTTON_START,
                     ControlId.GCPAD_START_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_5.boolean
+                    orientation
                 )
             )
         }
@@ -576,8 +569,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_l_pressed,
                     ButtonType.TRIGGER_L,
                     ControlId.GCPAD_L_DIGITAL,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_6.boolean
+                    orientation
                 )
             )
         }
@@ -589,8 +581,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.gcpad_r_pressed,
                     ButtonType.TRIGGER_R,
                     ControlId.GCPAD_R_DIGITAL,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_GC_7.boolean
+                    orientation
                 )
             )
         }
@@ -649,8 +640,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_a_pressed,
                     ButtonType.WIIMOTE_BUTTON_A,
                     ControlId.WIIMOTE_A_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_0.boolean
+                    orientation
                 )
             )
         }
@@ -662,8 +652,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_b_pressed,
                     ButtonType.WIIMOTE_BUTTON_B,
                     ControlId.WIIMOTE_B_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_1.boolean
+                    orientation
                 )
             )
         }
@@ -675,8 +664,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_one_pressed,
                     ButtonType.WIIMOTE_BUTTON_1,
                     ControlId.WIIMOTE_ONE_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_2.boolean
+                    orientation
                 )
             )
         }
@@ -688,8 +676,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_two_pressed,
                     ButtonType.WIIMOTE_BUTTON_2,
                     ControlId.WIIMOTE_TWO_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_3.boolean
+                    orientation
                 )
             )
         }
@@ -701,8 +688,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_plus_pressed,
                     ButtonType.WIIMOTE_BUTTON_PLUS,
                     ControlId.WIIMOTE_PLUS_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_4.boolean
+                    orientation
                 )
             )
         }
@@ -714,8 +700,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_minus_pressed,
                     ButtonType.WIIMOTE_BUTTON_MINUS,
                     ControlId.WIIMOTE_MINUS_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_5.boolean
+                    orientation
                 )
             )
         }
@@ -727,8 +712,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_home_pressed,
                     ButtonType.WIIMOTE_BUTTON_HOME,
                     ControlId.WIIMOTE_HOME_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_6.boolean
+                    orientation
                 )
             )
         }
@@ -759,8 +743,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.nunchuk_c_pressed,
                     ButtonType.NUNCHUK_BUTTON_C,
                     ControlId.NUNCHUK_C_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_8.boolean
+                    orientation
                 )
             )
         }
@@ -772,8 +755,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.nunchuk_z_pressed,
                     ButtonType.NUNCHUK_BUTTON_Z,
                     ControlId.NUNCHUK_Z_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_WII_9.boolean
+                    orientation
                 )
             )
         }
@@ -802,8 +784,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_a_pressed,
                     ButtonType.CLASSIC_BUTTON_A,
                     ControlId.CLASSIC_A_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_0.boolean
+                    orientation
                 )
             )
         }
@@ -815,8 +796,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_b_pressed,
                     ButtonType.CLASSIC_BUTTON_B,
                     ControlId.CLASSIC_B_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_1.boolean
+                    orientation
                 )
             )
         }
@@ -828,8 +808,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_x_pressed,
                     ButtonType.CLASSIC_BUTTON_X,
                     ControlId.CLASSIC_X_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_2.boolean
+                    orientation
                 )
             )
         }
@@ -841,8 +820,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_y_pressed,
                     ButtonType.CLASSIC_BUTTON_Y,
                     ControlId.CLASSIC_Y_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_3.boolean
+                    orientation
                 )
             )
         }
@@ -854,8 +832,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_plus_pressed,
                     ButtonType.CLASSIC_BUTTON_PLUS,
                     ControlId.CLASSIC_PLUS_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_4.boolean
+                    orientation
                 )
             )
         }
@@ -867,8 +844,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_minus_pressed,
                     ButtonType.CLASSIC_BUTTON_MINUS,
                     ControlId.CLASSIC_MINUS_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_5.boolean
+                    orientation
                 )
             )
         }
@@ -880,8 +856,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.wiimote_home_pressed,
                     ButtonType.CLASSIC_BUTTON_HOME,
                     ControlId.CLASSIC_HOME_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_6.boolean
+                    orientation
                 )
             )
         }
@@ -893,8 +868,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_l_pressed,
                     ButtonType.CLASSIC_TRIGGER_L,
                     ControlId.CLASSIC_L_DIGITAL,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_7.boolean
+                    orientation
                 )
             )
         }
@@ -906,8 +880,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_r_pressed,
                     ButtonType.CLASSIC_TRIGGER_R,
                     ControlId.CLASSIC_R_DIGITAL,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_8.boolean
+                    orientation
                 )
             )
         }
@@ -919,8 +892,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_zl_pressed,
                     ButtonType.CLASSIC_BUTTON_ZL,
                     ControlId.CLASSIC_ZL_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_9.boolean
+                    orientation
                 )
             )
         }
@@ -932,8 +904,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                     R.drawable.classic_zr_pressed,
                     ButtonType.CLASSIC_BUTTON_ZR,
                     ControlId.CLASSIC_ZR_BUTTON,
-                    orientation,
-                    BooleanSetting.MAIN_BUTTON_LATCHING_CLASSIC_10.boolean
+                    orientation
                 )
             )
         }
@@ -1123,17 +1094,11 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
      * @param pressedResId The resource ID of the [Drawable] to get the [Bitmap] of (Pressed State).
      * @param legacyId     Legacy identifier for the button the InputOverlayDrawableButton represents.
      * @param control      Control identifier for the button the InputOverlayDrawableButton represents.
-     * @param latching     Whether the button is latching.
      * @return An [InputOverlayDrawableButton] with the correct drawing bounds set.
      */
     private fun initializeOverlayButton(
         context: Context,
-        defaultResId: Int,
-        pressedResId: Int,
-        legacyId: Int,
-        control: Int,
-        orientation: String,
-        latching: Boolean
+        defaultResId: Int, pressedResId: Int, legacyId: Int, control: Int, orientation: String
     ): InputOverlayDrawableButton {
         // Decide scale based on button ID and user preference
         var scale = when (legacyId) {
@@ -1175,14 +1140,12 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
             resizeBitmap(context, BitmapFactory.decodeResource(resources, defaultResId), scale)
         val pressedStateBitmap =
             resizeBitmap(context, BitmapFactory.decodeResource(resources, pressedResId), scale)
-
         val overlayDrawable = InputOverlayDrawableButton(
             resources,
             defaultStateBitmap,
             pressedStateBitmap,
             legacyId,
-            control,
-            latching
+            control
         )
 
         // The X and Y coordinates of the InputOverlayDrawableButton on the InputOverlay.

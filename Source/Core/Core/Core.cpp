@@ -40,10 +40,8 @@
 #include "Common/Version.h"
 
 #include "Core/AchievementManager.h"
-#include "Core/API/Events.h"
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
-#include "Core/CPUThreadConfigCallback.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/ConfigManager.h"
 #include "Core/CoreTiming.h"
@@ -828,11 +826,6 @@ void SetNetplayerUserInfo()
   }
 }
 
-// Python scripting function call
-void OnFrameBegin()
-{
-  API::GetEventHub().EmitEvent(API::Events::FrameAdvance{});
-}
 
 // Display messages and return values
 
@@ -1060,10 +1053,9 @@ static void CpuThread(const std::optional<std::string>& savestate_path, bool del
   static_cast<void>(IDCache::GetEnvForThread());
 #endif
 
-  // The JIT need to be able to intercept faults, both for fastmem and for the BLR optimization.
-  const bool exception_handler = EMM::IsExceptionHandlerSupported();
-  if (exception_handler)
-    EMM::InstallExceptionHandler();
+  const bool fastmem_enabled = Config::Get(Config::MAIN_FASTMEM);
+  if (fastmem_enabled)
+    EMM::InstallExceptionHandler();  // Let's run under memory watch
 
 #ifdef USE_MEMORYWATCHER
   s_memory_watcher = std::make_unique<MemoryWatcher>();
@@ -1117,7 +1109,7 @@ static void CpuThread(const std::optional<std::string>& savestate_path, bool del
 
   s_is_started = false;
 
-  if (exception_handler)
+  if (fastmem_enabled)
     EMM::UninstallExceptionHandler();
 
   if (GDBStub::IsActive())
@@ -1188,9 +1180,6 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
   DeclareAsCPUThread();
   s_frame_step = false;
 
-  // If settings have changed since the previous run, notify callbacks.
-  CPUThreadConfigCallback::CheckForConfigChanges();
-
   // Switch the window used for inputs to the render window. This way, the cursor position
   // is relative to the render window, instead of the main window.
   ASSERT(g_controller_interface.IsInit());
@@ -1215,16 +1204,7 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
 
   Common::ScopeGuard sd_folder_sync_guard{[sync_sd_folder] {
     if (sync_sd_folder && Config::Get(Config::MAIN_ALLOW_SD_WRITES))
-    {
-      const bool sync_ok = Common::SyncSDImageToSDFolder([]() { return false; });
-      if (!sync_ok)
-      {
-        PanicAlertFmtT(
-            "Failed to sync SD card with folder. All changes made this session will be "
-            "discarded on next boot if you do not manually re-issue a resync in Config > "
-            "Wii > SD Card Settings > Convert File to Folder Now!");
-      }
-    }
+      Common::SyncSDImageToSDFolder([]() { return false; });
   }};
 
   // Load Wiimotes - only if we are booting in Wii mode
@@ -1497,6 +1477,8 @@ static bool PauseAndLock(Core::System& system, bool do_lock, bool unpause_on_unl
     // a temporary replacement CPU Thread.
     was_unpaused = system.GetCPU().PauseAndLock(true);
   }
+
+  system.GetExpansionInterface().PauseAndLock(do_lock, false);
 
   // audio has to come after CPU, because CPU thread can wait for audio thread (m_throttle).
   system.GetDSP().GetDSPEmulator()->PauseAndLock(do_lock);

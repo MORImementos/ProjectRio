@@ -14,7 +14,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.preference.PreferenceManager;
@@ -74,12 +73,8 @@ public final class DirectoryInitialization
 
     if (!setDolphinUserDirectory(context))
     {
-      ContextCompat.getMainExecutor(context).execute(() ->
-      {
-        Toast.makeText(context, R.string.external_storage_not_mounted, Toast.LENGTH_LONG).show();
-        System.exit(1);
-      });
-      return;
+      Toast.makeText(context, R.string.external_storage_not_mounted, Toast.LENGTH_LONG).show();
+      System.exit(1);
     }
 
     extractSysDirectory(context);

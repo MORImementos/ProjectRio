@@ -22,7 +22,6 @@
 
 #include "DolphinQt/Debugger/BreakpointDialog.h"
 #include "DolphinQt/Debugger/MemoryWidget.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/Resources.h"
 #include "DolphinQt/Settings.h"
 
@@ -314,7 +313,6 @@ void BreakpointWidget::OnClear()
 void BreakpointWidget::OnNewBreakpoint()
 {
   BreakpointDialog* dialog = new BreakpointDialog(this);
-  SetQWidgetWindowDecorations(dialog);
   dialog->exec();
 }
 
@@ -324,14 +322,12 @@ void BreakpointWidget::OnEditBreakpoint(u32 address, bool is_instruction_bp)
   {
     auto* dialog =
         new BreakpointDialog(this, m_system.GetPowerPC().GetBreakPoints().GetBreakpoint(address));
-    SetQWidgetWindowDecorations(dialog);
     dialog->exec();
   }
   else
   {
     auto* dialog =
         new BreakpointDialog(this, m_system.GetPowerPC().GetMemChecks().GetMemCheck(address));
-    SetQWidgetWindowDecorations(dialog);
     dialog->exec();
   }
 

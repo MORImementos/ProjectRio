@@ -22,70 +22,52 @@ void JitArm64BlockCache::Init()
 void JitArm64BlockCache::WriteLinkBlock(Arm64Gen::ARM64XEmitter& emit,
                                         const JitBlock::LinkData& source, const JitBlock* dest)
 {
-  const u8* start = emit.GetCodePtr();
-
   if (!dest)
   {
-    emit.MOVI2R(DISPATCHER_PC, source.exitAddress);
+    // Use a fixed amount of instructions, so we can assume to use 3 instructions on patching.
+    emit.MOVZ(DISPATCHER_PC, source.exitAddress & 0xFFFF, ShiftAmount::Shift0);
+    emit.MOVK(DISPATCHER_PC, source.exitAddress >> 16, ShiftAmount::Shift16);
+
     if (source.call)
-    {
-      if (emit.GetCodePtr() == start + BLOCK_LINK_FAST_BL_OFFSET - sizeof(u32))
-        emit.NOP();
-      DEBUG_ASSERT(emit.GetCodePtr() == start + BLOCK_LINK_FAST_BL_OFFSET || emit.HasWriteFailed());
       emit.BL(m_jit.GetAsmRoutines()->dispatcher);
-    }
     else
-    {
       emit.B(m_jit.GetAsmRoutines()->dispatcher);
-    }
-  }
-  else
-  {
-    if (source.call)
-    {
-      // The "fast" BL should be the last instruction, so that the return address matches the
-      // address that was pushed onto the stack by the function that called WriteLinkBlock
-      FixupBranch fast = emit.B(CC_GT);
-      emit.B(source.exitFarcode);
-      DEBUG_ASSERT(emit.GetCodePtr() == start + BLOCK_LINK_FAST_BL_OFFSET || emit.HasWriteFailed());
-      emit.SetJumpTarget(fast);
-      emit.BL(dest->normalEntry);
-    }
-    else
-    {
-      // Are we able to jump directly to the block?
-      s64 block_distance = ((s64)dest->normalEntry - (s64)emit.GetCodePtr()) >> 2;
-      if (block_distance >= -0x40000 && block_distance <= 0x3FFFF)
-      {
-        emit.B(CC_GT, dest->normalEntry);
-        emit.B(source.exitFarcode);
-      }
-      else
-      {
-        FixupBranch slow = emit.B(CC_LE);
-        emit.B(dest->normalEntry);
-        emit.SetJumpTarget(slow);
-        emit.B(source.exitFarcode);
-      }
-    }
+    return;
   }
 
-  // Use a fixed number of instructions so we have enough room for any patching needed later.
-  const u8* end = start + BLOCK_LINK_SIZE;
-  while (emit.GetCodePtr() < end)
+  if (source.call)
   {
-    emit.BRK(101);
-    if (emit.HasWriteFailed())
-      return;
+    // The "fast" BL must be the third instruction. So just use the former two to inline the
+    // downcount check here. It's better to do this near jump before the long jump to the other
+    // block.
+    FixupBranch fast_link = emit.B(CC_GT);
+    emit.BL(dest->checkedEntry);
+    emit.SetJumpTarget(fast_link);
+    emit.BL(dest->normalEntry);
+    return;
   }
-  ASSERT(emit.GetCodePtr() == end);
+
+  // Are we able to jump directly to the normal entry?
+  s64 distance = ((s64)dest->normalEntry - (s64)emit.GetCodePtr()) >> 2;
+  if (distance >= -0x40000 && distance <= 0x3FFFF)
+  {
+    emit.B(CC_GT, dest->normalEntry);
+    emit.B(dest->checkedEntry);
+    emit.BRK(101);
+    return;
+  }
+
+  FixupBranch fast_link = emit.B(CC_GT);
+  emit.B(dest->checkedEntry);
+  emit.SetJumpTarget(fast_link);
+  emit.B(dest->normalEntry);
 }
 
 void JitArm64BlockCache::WriteLinkBlock(const JitBlock::LinkData& source, const JitBlock* dest)
 {
   const Common::ScopedJITPageWriteAndNoExecute enable_jit_page_writes;
   u8* location = source.exitPtrs;
-  ARM64XEmitter emit(location, location + BLOCK_LINK_SIZE);
+  ARM64XEmitter emit(location, location + 12);
 
   WriteLinkBlock(emit, source, dest);
   emit.FlushIcache();
@@ -93,10 +75,11 @@ void JitArm64BlockCache::WriteLinkBlock(const JitBlock::LinkData& source, const 
 
 void JitArm64BlockCache::WriteDestroyBlock(const JitBlock& block)
 {
-  // Only clear the entry point as we might still be within this block.
-  ARM64XEmitter emit(block.normalEntry, block.normalEntry + 4);
+  // Only clear the entry points as we might still be within this block.
+  ARM64XEmitter emit(block.checkedEntry, block.normalEntry + 4);
   const Common::ScopedJITPageWriteAndNoExecute enable_jit_page_writes;
-  emit.BRK(0x123);
+  while (emit.GetWritableCodePtr() <= block.normalEntry)
+    emit.BRK(0x123);
   emit.FlushIcache();
 }
 

@@ -16,7 +16,6 @@
 #include "Common/Logging/Log.h"
 #include "Common/SPSCQueue.h"
 
-#include "Core/CPUThreadConfigCallback.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Core.h"
 #include "Core/PowerPC/PowerPC.h"
@@ -89,8 +88,8 @@ void CoreTimingManager::UnregisterAllEvents()
 
 void CoreTimingManager::Init()
 {
-  m_registered_config_callback_id =
-      CPUThreadConfigCallback::AddConfigChangedCallback([this]() { RefreshConfig(); });
+  m_registered_config_callback_id = Config::AddConfigChangedCallback(
+      [this]() { Core::RunAsCPUThread([this]() { RefreshConfig(); }); });
   RefreshConfig();
 
   m_last_oc_factor = m_config_oc_factor;
@@ -119,7 +118,7 @@ void CoreTimingManager::Shutdown()
   MoveEvents();
   ClearPendingEvents();
   UnregisterAllEvents();
-  CPUThreadConfigCallback::RemoveConfigChangedCallback(m_registered_config_callback_id);
+  Config::RemoveConfigChangedCallback(m_registered_config_callback_id);
 }
 
 void CoreTimingManager::RefreshConfig()
@@ -312,12 +311,10 @@ void CoreTimingManager::MoveEvents()
 
 void CoreTimingManager::Advance()
 {
-  CPUThreadConfigCallback::CheckForConfigChanges();
-
-  MoveEvents();
-
   auto& power_pc = m_system.GetPowerPC();
   auto& ppc_state = power_pc.GetPPCState();
+
+  MoveEvents();
 
   int cyclesExecuted = m_globals.slice_length - DowncountToCycles(ppc_state.downcount);
   m_globals.global_timer += cyclesExecuted;

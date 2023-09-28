@@ -7,8 +7,6 @@
 #include "Common/Arm64Emitter.h"
 #include "Common/BitUtils.h"
 #include "Common/CommonTypes.h"
-#include "Common/ScopeGuard.h"
-#include "Core/Core.h"
 #include "Core/PowerPC/Interpreter/Interpreter_FPUtils.h"
 #include "Core/PowerPC/JitArm64/Jit.h"
 #include "Core/PowerPC/PowerPC.h"
@@ -72,9 +70,6 @@ static u32 RunUpdateFPRF(PowerPC::PowerPCState& ppc_state, const std::function<v
 
 TEST(JitArm64, FPRF)
 {
-  Core::DeclareAsCPUThread();
-  Common::ScopeGuard cpu_thread_guard([] { Core::UndeclareAsCPUThread(); });
-
   auto& system = Core::System::GetInstance();
   auto& ppc_state = system.GetPPCState();
   TestFPRF test(system);

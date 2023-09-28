@@ -67,7 +67,6 @@
 #include "DolphinQt/QtUtils/DoubleClickEventFilter.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/ParallelProgressDialog.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/Resources.h"
 #include "DolphinQt/Settings.h"
 #include "DolphinQt/WiiUpdate.h"
@@ -473,14 +472,8 @@ void GameList::ShowContextMenu(const QPoint&)
     if (!is_mod_descriptor &&
         (platform == DiscIO::Platform::WiiWAD || platform == DiscIO::Platform::WiiDisc))
     {
-      QAction* open_wii_save_folder =
-          menu->addAction(tr("Open Wii &Save Folder"), this, &GameList::OpenWiiSaveFolder);
-      QAction* export_wii_save =
-          menu->addAction(tr("Export Wii Save"), this, &GameList::ExportWiiSave);
-
-      open_wii_save_folder->setEnabled(!Core::IsRunning());
-      export_wii_save->setEnabled(!Core::IsRunning());
-
+      menu->addAction(tr("Open Wii &Save Folder"), this, &GameList::OpenWiiSaveFolder);
+      menu->addAction(tr("Export Wii Save"), this, &GameList::ExportWiiSave);
       menu->addSeparator();
     }
 
@@ -559,7 +552,6 @@ void GameList::OpenProperties()
   connect(properties, &PropertiesDialog::OpenGraphicsSettings, this,
           &GameList::OpenGraphicsSettings);
 
-  SetQWidgetWindowDecorations(properties);
   properties->show();
 }
 
@@ -623,7 +615,6 @@ void GameList::ConvertFile()
     return;
 
   ConvertDialog dialog{std::move(games), this};
-  SetQWidgetWindowDecorations(&dialog);
   dialog.exec();
 }
 
@@ -641,7 +632,6 @@ void GameList::InstallWAD()
   result_dialog.setWindowTitle(success ? tr("Success") : tr("Failure"));
   result_dialog.setText(success ? tr("Successfully installed this title to the NAND.") :
                                   tr("Failed to install this title to the NAND."));
-  SetQWidgetWindowDecorations(&result_dialog);
   result_dialog.exec();
 }
 
@@ -659,7 +649,6 @@ void GameList::UninstallWAD()
                             "this title from the NAND without deleting its save data. Continue?"));
   warning_dialog.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
 
-  SetQWidgetWindowDecorations(&warning_dialog);
   if (warning_dialog.exec() == QMessageBox::No)
     return;
 
@@ -671,7 +660,6 @@ void GameList::UninstallWAD()
   result_dialog.setWindowTitle(success ? tr("Success") : tr("Failure"));
   result_dialog.setText(success ? tr("Successfully removed this title from the NAND.") :
                                   tr("Failed to remove this title from the NAND."));
-  SetQWidgetWindowDecorations(&result_dialog);
   result_dialog.exec();
 }
 
@@ -845,7 +833,6 @@ void GameList::DeleteFile()
   confirm_dialog.setInformativeText(tr("This cannot be undone!"));
   confirm_dialog.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
 
-  SetQWidgetWindowDecorations(&confirm_dialog);
   if (confirm_dialog.exec() == QMessageBox::Yes)
   {
     for (const auto& game : GetSelectedGames())
@@ -871,7 +858,6 @@ void GameList::DeleteFile()
                                              "delete the file or whether it's still in use."));
           error_dialog.setStandardButtons(QMessageBox::Retry | QMessageBox::Abort);
 
-          SetQWidgetWindowDecorations(&error_dialog);
           if (error_dialog.exec() == QMessageBox::Abort)
             break;
         }

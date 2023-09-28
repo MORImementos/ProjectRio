@@ -35,10 +35,8 @@ private:
   void LoadSettings();
   void SaveSettings();
 
-  void SaveCheckBox(QCheckBox* checkbox, const std::string& section, const std::string& key,
-                    bool reverse = false);
-  void LoadCheckBox(QCheckBox* checkbox, const std::string& section, const std::string& key,
-                    bool reverse = false);
+  void SaveCheckBox(QCheckBox* checkbox, const std::string& section, const std::string& key);
+  void LoadCheckBox(QCheckBox* checkbox, const std::string& section, const std::string& key);
 
   QString m_gameini_sys_path;
   QString m_gameini_local_path;
@@ -50,10 +48,9 @@ private:
   QCheckBox* m_enable_mmu;
   QCheckBox* m_enable_fprf;
   QCheckBox* m_sync_gpu;
-  QCheckBox* m_emulate_disc_speed;
+  QCheckBox* m_enable_fast_disc;
   QCheckBox* m_use_dsp_hle;
   QCheckBox* m_use_monoscopic_shadows;
-  QCheckBox* m_manual_texture_sampling;
 
   QPushButton* m_refresh_config;
 

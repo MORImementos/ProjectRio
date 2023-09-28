@@ -17,7 +17,6 @@
 #include "Common/Version.h"
 
 #include "DolphinQt/QtUtils/RunOnObject.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/Settings.h"
 #include <qdesktopservices.h>
 
@@ -91,7 +90,6 @@ void Updater::OnUpdateAvailable(const NewVersionInformation& info)
     dialog->setLayout(layout);
     layout->addWidget(buttons);
 
-    SetQWidgetWindowDecorations(dialog);
     return dialog->exec();
   });
 

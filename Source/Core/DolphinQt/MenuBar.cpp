@@ -15,7 +15,6 @@
 #include <QMap>
 #include <QUrl>
 
-#include "Common/Align.h"
 #include "Common/CommonPaths.h"
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
@@ -33,7 +32,6 @@
 #include "Core/HW/WiiSave.h"
 #include "Core/HW/Wiimote.h"
 #include "Core/IOS/ES/ES.h"
-#include "Core/IOS/FS/FileSystem.h"
 #include "Core/IOS/IOS.h"
 #include "Core/IOS/USB/Bluetooth/BTEmu.h"
 #include "Core/Movie.h"
@@ -59,7 +57,6 @@
 #include "DolphinQt/QtUtils/DolphinFileDialog.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/ParallelProgressDialog.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/Settings.h"
 #include "DolphinQt/Updater.h"
 
@@ -139,9 +136,19 @@ void MenuBar::OnEmulationStateChanged(Core::State state)
   m_jit_interpreter_core->setEnabled(running);
   m_jit_block_linking->setEnabled(!running);
   m_jit_disable_cache->setEnabled(!running);
+  m_jit_disable_fastmem->setEnabled(!running);
   m_jit_clear_cache->setEnabled(running);
   m_jit_log_coverage->setEnabled(!running);
   m_jit_search_instruction->setEnabled(running);
+
+  for (QAction* action :
+       {m_jit_off, m_jit_loadstore_off, m_jit_loadstore_lbzx_off, m_jit_loadstore_lxz_off,
+        m_jit_loadstore_lwz_off, m_jit_loadstore_floating_off, m_jit_loadstore_paired_off,
+        m_jit_floatingpoint_off, m_jit_integer_off, m_jit_paired_off, m_jit_systemregisters_off,
+        m_jit_branch_off, m_jit_register_cache_off})
+  {
+    action->setEnabled(running && !playing);
+  }
 
   // Symbols
   m_symbols->setEnabled(running);
@@ -169,7 +176,6 @@ void MenuBar::OnDebugModeToggled(bool enabled)
   m_show_memory->setVisible(enabled);
   m_show_network->setVisible(enabled);
   m_show_jit->setVisible(enabled);
-  m_show_scripting->setVisible(enabled);
 
   if (enabled)
   {
@@ -490,12 +496,6 @@ void MenuBar::AddViewMenu()
   m_show_jit->setChecked(Settings::Instance().IsJITVisible());
   connect(m_show_jit, &QAction::toggled, &Settings::Instance(), &Settings::SetJITVisible);
   connect(&Settings::Instance(), &Settings::JITVisibilityChanged, m_show_jit, &QAction::setChecked);
-
-  m_show_scripting = view_menu->addAction(tr("&Scripting"));
-  m_show_scripting->setCheckable(true);
-  m_show_scripting->setChecked(Settings::Instance().IsScriptingVisible());
-  connect(m_show_scripting, &QAction::toggled, &Settings::Instance(), &Settings::SetScriptingVisible);
-  connect(&Settings::Instance(), &Settings::ScriptingVisibilityChanged, m_show_scripting, &QAction::setChecked);
 
   view_menu->addSeparator();
 
@@ -863,8 +863,10 @@ void MenuBar::AddJITMenu()
   m_jit_disable_fastmem = m_jit->addAction(tr("Disable Fastmem"));
   m_jit_disable_fastmem->setCheckable(true);
   m_jit_disable_fastmem->setChecked(!Config::Get(Config::MAIN_FASTMEM));
-  connect(m_jit_disable_fastmem, &QAction::toggled,
-          [](bool enabled) { Config::SetBaseOrCurrent(Config::MAIN_FASTMEM, !enabled); });
+  connect(m_jit_disable_fastmem, &QAction::toggled, [this](bool enabled) {
+    Config::SetBaseOrCurrent(Config::MAIN_FASTMEM, !enabled);
+    ClearCache();
+  });
 
   m_jit_clear_cache = m_jit->addAction(tr("Clear Cache"), this, &MenuBar::ClearCache);
 
@@ -880,92 +882,106 @@ void MenuBar::AddJITMenu()
   m_jit_off = m_jit->addAction(tr("JIT Off (JIT Core)"));
   m_jit_off->setCheckable(true);
   m_jit_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_OFF));
-  connect(m_jit_off, &QAction::toggled,
-          [](bool enabled) { Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_OFF, enabled); });
+  connect(m_jit_off, &QAction::toggled, [this](bool enabled) {
+    Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_OFF, enabled);
+    ClearCache();
+  });
 
   m_jit_loadstore_off = m_jit->addAction(tr("JIT LoadStore Off"));
   m_jit_loadstore_off->setCheckable(true);
   m_jit_loadstore_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_OFF));
-  connect(m_jit_loadstore_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_loadstore_lbzx_off = m_jit->addAction(tr("JIT LoadStore lbzx Off"));
   m_jit_loadstore_lbzx_off->setCheckable(true);
   m_jit_loadstore_lbzx_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_LBZX_OFF));
-  connect(m_jit_loadstore_lbzx_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_lbzx_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_LBZX_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_loadstore_lxz_off = m_jit->addAction(tr("JIT LoadStore lXz Off"));
   m_jit_loadstore_lxz_off->setCheckable(true);
   m_jit_loadstore_lxz_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_LXZ_OFF));
-  connect(m_jit_loadstore_lxz_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_lxz_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_LXZ_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_loadstore_lwz_off = m_jit->addAction(tr("JIT LoadStore lwz Off"));
   m_jit_loadstore_lwz_off->setCheckable(true);
   m_jit_loadstore_lwz_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_LWZ_OFF));
-  connect(m_jit_loadstore_lwz_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_lwz_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_LWZ_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_loadstore_floating_off = m_jit->addAction(tr("JIT LoadStore Floating Off"));
   m_jit_loadstore_floating_off->setCheckable(true);
   m_jit_loadstore_floating_off->setChecked(
       Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_FLOATING_OFF));
-  connect(m_jit_loadstore_floating_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_floating_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_FLOATING_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_loadstore_paired_off = m_jit->addAction(tr("JIT LoadStore Paired Off"));
   m_jit_loadstore_paired_off->setCheckable(true);
   m_jit_loadstore_paired_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_LOAD_STORE_PAIRED_OFF));
-  connect(m_jit_loadstore_paired_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_loadstore_paired_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_LOAD_STORE_PAIRED_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_floatingpoint_off = m_jit->addAction(tr("JIT FloatingPoint Off"));
   m_jit_floatingpoint_off->setCheckable(true);
   m_jit_floatingpoint_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_FLOATING_POINT_OFF));
-  connect(m_jit_floatingpoint_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_floatingpoint_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_FLOATING_POINT_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_integer_off = m_jit->addAction(tr("JIT Integer Off"));
   m_jit_integer_off->setCheckable(true);
   m_jit_integer_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_INTEGER_OFF));
-  connect(m_jit_integer_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_integer_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_INTEGER_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_paired_off = m_jit->addAction(tr("JIT Paired Off"));
   m_jit_paired_off->setCheckable(true);
   m_jit_paired_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_PAIRED_OFF));
-  connect(m_jit_paired_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_paired_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_PAIRED_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_systemregisters_off = m_jit->addAction(tr("JIT SystemRegisters Off"));
   m_jit_systemregisters_off->setCheckable(true);
   m_jit_systemregisters_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_SYSTEM_REGISTERS_OFF));
-  connect(m_jit_systemregisters_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_systemregisters_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_SYSTEM_REGISTERS_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_branch_off = m_jit->addAction(tr("JIT Branch Off"));
   m_jit_branch_off->setCheckable(true);
   m_jit_branch_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_BRANCH_OFF));
-  connect(m_jit_branch_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_branch_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_BRANCH_OFF, enabled);
+    ClearCache();
   });
 
   m_jit_register_cache_off = m_jit->addAction(tr("JIT Register Cache Off"));
   m_jit_register_cache_off->setCheckable(true);
   m_jit_register_cache_off->setChecked(Config::Get(Config::MAIN_DEBUG_JIT_REGISTER_CACHE_OFF));
-  connect(m_jit_register_cache_off, &QAction::toggled, [](bool enabled) {
+  connect(m_jit_register_cache_off, &QAction::toggled, [this](bool enabled) {
     Config::SetBaseOrCurrent(Config::MAIN_DEBUG_JIT_REGISTER_CACHE_OFF, enabled);
+    ClearCache();
   });
 }
 
@@ -1133,51 +1149,12 @@ void MenuBar::CheckNAND()
   WiiUtils::NANDCheckResult result = WiiUtils::CheckNAND(ios);
   if (!result.bad)
   {
-    const bool overfull = result.used_clusters_user > IOS::HLE::FS::USER_CLUSTERS ||
-                          result.used_clusters_system > IOS::HLE::FS::SYSTEM_CLUSTERS;
-    const QString user_cluster_message =
-        tr("The user-accessible part of your NAND contains %1 blocks (%2 KiB) "
-           "of data, out of an allowed maximum of %3 blocks (%4 KiB).")
-            .arg(Common::AlignUp(result.used_clusters_user, IOS::HLE::FS::CLUSTERS_PER_BLOCK) /
-                 IOS::HLE::FS::CLUSTERS_PER_BLOCK)
-            .arg((result.used_clusters_user * IOS::HLE::FS::CLUSTER_SIZE) / 1024)
-            .arg(IOS::HLE::FS::USER_CLUSTERS / IOS::HLE::FS::CLUSTERS_PER_BLOCK)
-            .arg((IOS::HLE::FS::USER_CLUSTERS * IOS::HLE::FS::CLUSTER_SIZE) / 1024);
-    const QString system_cluster_message =
-        tr("The system-reserved part of your NAND contains %1 blocks (%2 KiB) "
-           "of data, out of an allowed maximum of %3 blocks (%4 KiB).")
-            .arg(Common::AlignUp(result.used_clusters_system, IOS::HLE::FS::CLUSTERS_PER_BLOCK) /
-                 IOS::HLE::FS::CLUSTERS_PER_BLOCK)
-            .arg((result.used_clusters_system * IOS::HLE::FS::CLUSTER_SIZE) / 1024)
-            .arg(IOS::HLE::FS::SYSTEM_CLUSTERS / IOS::HLE::FS::CLUSTERS_PER_BLOCK)
-            .arg((IOS::HLE::FS::SYSTEM_CLUSTERS * IOS::HLE::FS::CLUSTER_SIZE) / 1024);
-
-    if (overfull)
-    {
-      ModalMessageBox::warning(this, tr("NAND Check"),
-                               QStringLiteral("<b>%1</b><br/><br/>%2<br/><br/>%3")
-                                   .arg(tr("Your NAND contains more data than allowed. Wii "
-                                           "software may behave incorrectly or not allow saving."))
-                                   .arg(user_cluster_message)
-                                   .arg(system_cluster_message));
-    }
-    else
-    {
-      ModalMessageBox::information(this, tr("NAND Check"),
-                                   QStringLiteral("<b>%1</b><br/><br/>%2<br/><br/>%3")
-                                       .arg(tr("No issues have been detected."))
-                                       .arg(user_cluster_message)
-                                       .arg(system_cluster_message));
-    }
+    ModalMessageBox::information(this, tr("NAND Check"), tr("No issues have been detected."));
     return;
   }
 
-  {
-    NANDRepairDialog dialog(result, this);
-    SetQWidgetWindowDecorations(&dialog);
-    if (dialog.exec() != QDialog::Accepted)
-      return;
-  }
+  if (NANDRepairDialog(result, this).exec() != QDialog::Accepted)
+    return;
 
   if (WiiUtils::RepairNAND(ios))
   {
@@ -1334,7 +1311,6 @@ void MenuBar::GenerateSymbolsFromRSOAuto()
 
     return matches;
   });
-  SetQWidgetWindowDecorations(progress.GetRaw());
   progress.GetRaw()->exec();
 
   const auto matches = future.get();

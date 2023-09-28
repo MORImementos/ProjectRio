@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "Core/FreeLookConfig.h"
-
-#include "Core/CPUThreadConfigCallback.h"
 #include "Core/Config/FreeLookSettings.h"
 #include "Core/ConfigManager.h"
 #include "Core/Core.h"
@@ -39,7 +37,7 @@ void Config::Refresh()
 {
   if (!s_has_registered_callback)
   {
-    CPUThreadConfigCallback::AddConfigChangedCallback([] { s_config.Refresh(); });
+    ::Config::AddConfigChangedCallback([] { Core::RunAsCPUThread([] { s_config.Refresh(); }); });
     s_has_registered_callback = true;
   }
 

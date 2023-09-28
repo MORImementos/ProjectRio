@@ -160,25 +160,18 @@ void* AllocateAlignedMemory(size_t size, size_t alignment)
   return ptr;
 }
 
-bool FreeMemoryPages(void* ptr, size_t size)
+void FreeMemoryPages(void* ptr, size_t size)
 {
   if (ptr)
   {
 #ifdef _WIN32
     if (!VirtualFree(ptr, 0, MEM_RELEASE))
-    {
       PanicAlertFmt("FreeMemoryPages failed!\nVirtualFree: {}", GetLastErrorString());
-      return false;
-    }
 #else
     if (munmap(ptr, size) != 0)
-    {
       PanicAlertFmt("FreeMemoryPages failed!\nmunmap: {}", LastStrerrorString());
-      return false;
-    }
 #endif
   }
-  return true;
 }
 
 void FreeAlignedMemory(void* ptr)
@@ -193,56 +186,39 @@ void FreeAlignedMemory(void* ptr)
   }
 }
 
-bool ReadProtectMemory(void* ptr, size_t size)
+void ReadProtectMemory(void* ptr, size_t size)
 {
 #ifdef _WIN32
   DWORD oldValue;
   if (!VirtualProtect(ptr, size, PAGE_NOACCESS, &oldValue))
-  {
     PanicAlertFmt("ReadProtectMemory failed!\nVirtualProtect: {}", GetLastErrorString());
-    return false;
-  }
 #else
   if (mprotect(ptr, size, PROT_NONE) != 0)
-  {
     PanicAlertFmt("ReadProtectMemory failed!\nmprotect: {}", LastStrerrorString());
-    return false;
-  }
 #endif
-  return true;
 }
 
-bool WriteProtectMemory(void* ptr, size_t size, bool allowExecute)
+void WriteProtectMemory(void* ptr, size_t size, bool allowExecute)
 {
 #ifdef _WIN32
   DWORD oldValue;
   if (!VirtualProtect(ptr, size, allowExecute ? PAGE_EXECUTE_READ : PAGE_READONLY, &oldValue))
-  {
     PanicAlertFmt("WriteProtectMemory failed!\nVirtualProtect: {}", GetLastErrorString());
-    return false;
-  }
 #elif !(defined(_M_ARM_64) && defined(__APPLE__))
   // MacOS 11.2 on ARM does not allow for changing the access permissions of pages
   // that were marked executable, instead it uses the protections offered by MAP_JIT
   // for write protection.
   if (mprotect(ptr, size, allowExecute ? (PROT_READ | PROT_EXEC) : PROT_READ) != 0)
-  {
     PanicAlertFmt("WriteProtectMemory failed!\nmprotect: {}", LastStrerrorString());
-    return false;
-  }
 #endif
-  return true;
 }
 
-bool UnWriteProtectMemory(void* ptr, size_t size, bool allowExecute)
+void UnWriteProtectMemory(void* ptr, size_t size, bool allowExecute)
 {
 #ifdef _WIN32
   DWORD oldValue;
   if (!VirtualProtect(ptr, size, allowExecute ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE, &oldValue))
-  {
     PanicAlertFmt("UnWriteProtectMemory failed!\nVirtualProtect: {}", GetLastErrorString());
-    return false;
-  }
 #elif !(defined(_M_ARM_64) && defined(__APPLE__))
   // MacOS 11.2 on ARM does not allow for changing the access permissions of pages
   // that were marked executable, instead it uses the protections offered by MAP_JIT
@@ -251,10 +227,8 @@ bool UnWriteProtectMemory(void* ptr, size_t size, bool allowExecute)
                allowExecute ? (PROT_READ | PROT_WRITE | PROT_EXEC) : PROT_WRITE | PROT_READ) != 0)
   {
     PanicAlertFmt("UnWriteProtectMemory failed!\nmprotect: {}", LastStrerrorString());
-    return false;
   }
 #endif
-  return true;
 }
 
 size_t MemPhysical()

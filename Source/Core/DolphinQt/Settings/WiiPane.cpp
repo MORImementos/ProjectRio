@@ -35,7 +35,6 @@
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/NonDefaultQPushButton.h"
 #include "DolphinQt/QtUtils/ParallelProgressDialog.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 #include "DolphinQt/QtUtils/SignalBlocking.h"
 #include "DolphinQt/Settings.h"
 #include "DolphinQt/Settings/USBDeviceAddToWhitelistDialog.h"
@@ -289,7 +288,6 @@ void WiiPane::CreateSDCard()
         progress_dialog.Reset();
         return good;
       });
-      SetQWidgetWindowDecorations(progress_dialog.GetRaw());
       progress_dialog.GetRaw()->exec();
       if (!success.get())
         ModalMessageBox::warning(this, tr("Convert Folder to File Now"), tr("Conversion failed."));
@@ -314,7 +312,6 @@ void WiiPane::CreateSDCard()
         progress_dialog.Reset();
         return good;
       });
-      SetQWidgetWindowDecorations(progress_dialog.GetRaw());
       progress_dialog.GetRaw()->exec();
       if (!success.get())
         ModalMessageBox::warning(this, tr("Convert File to Folder Now"), tr("Conversion failed."));
@@ -471,7 +468,6 @@ void WiiPane::OnUSBWhitelistAddButton()
   USBDeviceAddToWhitelistDialog usb_whitelist_dialog(this);
   connect(&usb_whitelist_dialog, &USBDeviceAddToWhitelistDialog::accepted, this,
           &WiiPane::PopulateUSBPassthroughListWidget);
-  SetQWidgetWindowDecorations(&usb_whitelist_dialog);
   usb_whitelist_dialog.exec();
 }
 

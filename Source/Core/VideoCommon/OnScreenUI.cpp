@@ -7,7 +7,6 @@
 #include "Common/Profiler.h"
 #include "Common/Timer.h"
 
-#include "Core/API/Gui.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/NetplaySettings.h"
 #include "Core/Movie.h"
@@ -333,7 +332,6 @@ void OnScreenUI::Finalize()
   auto lock = GetImGuiLock();
 
   g_perf_metrics.DrawImGuiStats(m_backbuffer_scale);
-  API::GetGui().Render();
   DrawDebugText();
   OSD::DrawMessages();
   ImGui::Render();
@@ -359,37 +357,35 @@ void OnScreenUI::SetScale(float backbuffer_scale)
 }
 void OnScreenUI::SetKeyMap(const DolphinKeyMap& key_map)
 {
+  // Right now this is a 1:1 mapping. But might not be true later
   static constexpr DolphinKeyMap dolphin_to_imgui_map = {
       ImGuiKey_Tab,       ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow,
       ImGuiKey_DownArrow, ImGuiKey_PageUp,    ImGuiKey_PageDown,   ImGuiKey_Home,
       ImGuiKey_End,       ImGuiKey_Insert,    ImGuiKey_Delete,     ImGuiKey_Backspace,
-      ImGuiKey_Space,     ImGuiKey_Enter,     ImGuiKey_Escape,     ImGuiKey_KeypadEnter,
+      ImGuiKey_Space,     ImGuiKey_Enter,     ImGuiKey_Escape,     ImGuiKey_KeyPadEnter,
       ImGuiKey_A,         ImGuiKey_C,         ImGuiKey_V,          ImGuiKey_X,
       ImGuiKey_Y,         ImGuiKey_Z,
   };
+  static_assert(dolphin_to_imgui_map.size() == ImGuiKey_COUNT);  // Fail if ImGui adds keys
 
   auto lock = GetImGuiLock();
 
   if (!ImGui::GetCurrentContext())
     return;
 
-  m_dolphin_to_imgui_map.clear();
   for (int dolphin_key = 0; dolphin_key <= static_cast<int>(DolphinKey::Z); dolphin_key++)
   {
-    const int imgui_key = dolphin_to_imgui_map[DolphinKey(dolphin_key)];
+    int imgui_key = dolphin_to_imgui_map[DolphinKey(dolphin_key)];
     if (imgui_key >= 0)
-    {
-      const int mapped_key = key_map[DolphinKey(dolphin_key)];
-      m_dolphin_to_imgui_map[mapped_key & 0x1FF] = imgui_key;
-    }
+      ImGui::GetIO().KeyMap[imgui_key] = (key_map[DolphinKey(dolphin_key)] & 0x1FF);
   }
 }
 
 void OnScreenUI::SetKey(u32 key, bool is_down, const char* chars)
 {
   auto lock = GetImGuiLock();
-  if (auto iter = m_dolphin_to_imgui_map.find(key); iter != m_dolphin_to_imgui_map.end())
-    ImGui::GetIO().AddKeyEvent((ImGuiKey)iter->second, is_down);
+  if (key < std::size(ImGui::GetIO().KeysDown))
+    ImGui::GetIO().KeysDown[key] = is_down;
 
   if (chars)
     ImGui::GetIO().AddInputCharactersUTF8(chars);

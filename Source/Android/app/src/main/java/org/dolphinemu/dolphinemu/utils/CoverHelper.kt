@@ -8,16 +8,16 @@ object CoverHelper {
     @JvmStatic
     fun buildGameTDBUrl(game: GameFile, region: String?): String {
         val baseUrl = "https://art.gametdb.com/wii/cover/%s/%s.png"
-        return String.format(baseUrl, region, game.getGameTdbId())
+        return String.format(baseUrl, region, game.gameTdbId)
     }
 
     @JvmStatic
     fun getRegion(game: GameFile): String {
-        val region: String = when (game.getRegion()) {
+        val region: String = when (game.region) {
             GameFile.REGION_NTSC_J -> "JA"
             GameFile.REGION_NTSC_U -> "US"
             GameFile.REGION_NTSC_K -> "KO"
-            GameFile.REGION_PAL -> when (game.getCountry()) {
+            GameFile.REGION_PAL -> when (game.country) {
                 3 -> "AU" // Australia
                 4 -> "FR" // France
                 5 -> "DE" // Germany

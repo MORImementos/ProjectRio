@@ -60,7 +60,3 @@
 [submodule "Externals/curl/curl"]
 	path = Externals/curl/curl
 	url = https://github.com/curl/curl.git
-[submodule "Externals/python"]
-	path = Externals/python
-	url = https://github.com/Felk/ext-python.git
-	branch = master

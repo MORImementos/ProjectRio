@@ -10,7 +10,6 @@
 #include "AudioCommon/SurroundDecoder.h"
 #include "AudioCommon/WaveFile.h"
 #include "Common/CommonTypes.h"
-#include "Common/Config/Config.h"
 
 class PointerWrap;
 
@@ -121,5 +120,5 @@ private:
   int m_config_timing_variance;
   bool m_config_audio_stretch;
 
-  Config::ConfigChangedCallbackID m_config_changed_callback_id;
+  size_t m_config_changed_callback_id;
 };

@@ -9,6 +9,7 @@
 #include "Common/FileUtil.h"
 #include "Common/Logging/Log.h"
 #include "Common/StringUtil.h"
+#include "VideoCommon/Assets/CustomTextureData.h"
 #include "VideoCommon/Assets/MaterialAsset.h"
 #include "VideoCommon/Assets/ShaderAsset.h"
 
@@ -16,29 +17,12 @@ namespace VideoCommon
 {
 namespace
 {
-std::chrono::system_clock::time_point FileTimeToSysTime(std::filesystem::file_time_type file_time)
-{
-#ifdef _WIN32
-  return std::chrono::clock_cast<std::chrono::system_clock>(file_time);
-#else
-  // Note: all compilers should switch to chrono::clock_cast
-  // once it is available for use
-  const auto system_time_now = std::chrono::system_clock::now();
-  const auto file_time_now = decltype(file_time)::clock::now();
-  return std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-      file_time - file_time_now + system_time_now);
-#endif
-}
-
 std::size_t GetAssetSize(const CustomTextureData& data)
 {
   std::size_t total = 0;
-  for (const auto& slice : data.m_slices)
+  for (const auto& level : data.m_levels)
   {
-    for (const auto& level : slice.m_levels)
-    {
-      total += level.data.size();
-    }
+    total += level.data.size();
   }
   return total;
 }
@@ -58,9 +42,8 @@ DirectFilesystemAssetLibrary::GetLastAssetWriteTime(const AssetID& asset_id) con
       const auto tp = std::filesystem::last_write_time(value, ec);
       if (ec)
         continue;
-      auto tp_sys = FileTimeToSysTime(tp);
-      if (tp_sys > max_entry)
-        max_entry = tp_sys;
+      if (tp > max_entry)
+        max_entry = tp;
     }
     return max_entry;
   }
@@ -120,18 +103,18 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadPixelShader(const
   }
   const auto approx_mem_size = metadata_size + shader_size;
 
-  if (!File::ReadFileToString(PathToString(shader->second), data->m_shader_source))
+  if (!File::ReadFileToString(shader->second.string(), data->m_shader_source))
   {
     ERROR_LOG_FMT(VIDEO, "Asset '{}' error -  failed to load the shader file '{}',", asset_id,
-                  PathToString(shader->second));
+                  shader->second.string());
     return {};
   }
 
   std::string json_data;
-  if (!File::ReadFileToString(PathToString(metadata->second), json_data))
+  if (!File::ReadFileToString(metadata->second.string(), json_data))
   {
     ERROR_LOG_FMT(VIDEO, "Asset '{}' error -  failed to load the json file '{}',", asset_id,
-                  PathToString(metadata->second));
+                  metadata->second.string());
     return {};
   }
 
@@ -142,7 +125,7 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadPixelShader(const
   {
     ERROR_LOG_FMT(VIDEO,
                   "Asset '{}' error -  failed to load the json file '{}', due to parse error: {}",
-                  asset_id, PathToString(metadata->second), error);
+                  asset_id, metadata->second.string(), error);
     return {};
   }
   if (!root.is<picojson::object>())
@@ -150,7 +133,7 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadPixelShader(const
     ERROR_LOG_FMT(
         VIDEO,
         "Asset '{}' error -  failed to load the json file '{}', due to root not being an object!",
-        asset_id, PathToString(metadata->second));
+        asset_id, metadata->second.string());
     return {};
   }
 
@@ -176,10 +159,10 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadMaterial(const As
   const auto& asset_path = asset_map.begin()->second;
 
   std::string json_data;
-  if (!File::ReadFileToString(PathToString(asset_path), json_data))
+  if (!File::ReadFileToString(asset_path.string(), json_data))
   {
     ERROR_LOG_FMT(VIDEO, "Asset '{}' error -  material failed to load the json file '{}',",
-                  asset_id, PathToString(asset_path));
+                  asset_id, asset_path.string());
     return {};
   }
 
@@ -191,7 +174,7 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadMaterial(const As
     ERROR_LOG_FMT(
         VIDEO,
         "Asset '{}' error -  material failed to load the json file '{}', due to parse error: {}",
-        asset_id, PathToString(asset_path), error);
+        asset_id, asset_path.string(), error);
     return {};
   }
   if (!root.is<picojson::object>())
@@ -199,7 +182,7 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadMaterial(const As
     ERROR_LOG_FMT(VIDEO,
                   "Asset '{}' error - material failed to load the json file '{}', due to root not "
                   "being an object!",
-                  asset_id, PathToString(asset_path));
+                  asset_id, asset_path.string());
     return {};
   }
 
@@ -210,7 +193,7 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadMaterial(const As
     ERROR_LOG_FMT(VIDEO,
                   "Asset '{}' error -  material failed to load the json file '{}', as material "
                   "json could not be parsed!",
-                  asset_id, PathToString(asset_path));
+                  asset_id, asset_path.string());
     return {};
   }
 
@@ -239,45 +222,37 @@ CustomAssetLibrary::LoadInfo DirectFilesystemAssetLibrary::LoadTexture(const Ass
                   asset_id, ec);
     return {};
   }
-  auto ext = PathToString(asset_path.extension());
+  auto ext = asset_path.extension().string();
   Common::ToLower(&ext);
   if (ext == ".dds")
   {
-    if (!LoadDDSTexture(data, PathToString(asset_path)))
+    if (!LoadDDSTexture(data, asset_path.string()))
     {
       ERROR_LOG_FMT(VIDEO, "Asset '{}' error - could not load dds texture!", asset_id);
       return {};
     }
 
-    if (data->m_slices.empty()) [[unlikely]]
-      data->m_slices.push_back({});
-
-    if (!LoadMips(asset_path, &data->m_slices[0]))
+    if (!LoadMips(asset_path, data))
       return {};
 
-    return LoadInfo{GetAssetSize(*data), FileTimeToSysTime(last_loaded_time)};
+    return LoadInfo{GetAssetSize(*data), last_loaded_time};
   }
   else if (ext == ".png")
   {
-    // If we have no slices, create one
-    if (data->m_slices.empty())
-      data->m_slices.push_back({});
-
-    auto& slice = data->m_slices[0];
     // If we have no levels, create one to pass into LoadPNGTexture
-    if (slice.m_levels.empty())
-      slice.m_levels.push_back({});
+    if (data->m_levels.empty())
+      data->m_levels.push_back({});
 
-    if (!LoadPNGTexture(&slice.m_levels[0], PathToString(asset_path)))
+    if (!LoadPNGTexture(&data->m_levels[0], asset_path.string()))
     {
       ERROR_LOG_FMT(VIDEO, "Asset '{}' error - could not load png texture!", asset_id);
       return {};
     }
 
-    if (!LoadMips(asset_path, &slice))
+    if (!LoadMips(asset_path, data))
       return {};
 
-    return LoadInfo{GetAssetSize(*data), FileTimeToSysTime(last_loaded_time)};
+    return LoadInfo{GetAssetSize(*data), last_loaded_time};
   }
 
   ERROR_LOG_FMT(VIDEO, "Asset '{}' error - extension '{}' unknown!", asset_id, ext);
@@ -292,7 +267,7 @@ void DirectFilesystemAssetLibrary::SetAssetIDMapData(const AssetID& asset_id,
 }
 
 bool DirectFilesystemAssetLibrary::LoadMips(const std::filesystem::path& asset_path,
-                                            CustomTextureData::ArraySlice* data)
+                                            CustomTextureData* data)
 {
   if (!data) [[unlikely]]
     return false;
@@ -300,7 +275,7 @@ bool DirectFilesystemAssetLibrary::LoadMips(const std::filesystem::path& asset_p
   std::string path;
   std::string filename;
   std::string extension;
-  SplitPath(PathToString(asset_path), &path, &filename, &extension);
+  SplitPath(asset_path.string(), &path, &filename, &extension);
 
   std::string extension_lower = extension;
   Common::ToLower(&extension_lower);
@@ -314,7 +289,7 @@ bool DirectFilesystemAssetLibrary::LoadMips(const std::filesystem::path& asset_p
     if (!File::Exists(full_path))
       return true;
 
-    VideoCommon::CustomTextureData::ArraySlice::Level level;
+    VideoCommon::CustomTextureData::Level level;
     if (extension_lower == ".dds")
     {
       if (!LoadDDSTexture(&level, full_path, mip_level))

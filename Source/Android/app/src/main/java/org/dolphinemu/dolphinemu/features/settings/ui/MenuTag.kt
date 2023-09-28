@@ -19,7 +19,6 @@ enum class MenuTag {
     DEBUG("debug"),
     GRAPHICS("graphics"),
     ENHANCEMENTS("enhancements"),
-    COLOR_CORRECTION("color_correction"),
     STEREOSCOPY("stereoscopy"),
     HACKS("hacks"),
     STATISTICS("statistics"),

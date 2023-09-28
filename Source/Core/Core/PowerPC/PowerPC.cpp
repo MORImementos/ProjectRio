@@ -236,9 +236,9 @@ void PowerPCManager::InitializeCPUCore(CPUCore cpu_core)
   m_mode = m_cpu_core_base == &interpreter ? CoreMode::Interpreter : CoreMode::JIT;
 }
 
-std::span<const CPUCore> AvailableCPUCores()
+const std::vector<CPUCore>& AvailableCPUCores()
 {
-  static constexpr auto cpu_cores = {
+  static const std::vector<CPUCore> cpu_cores = {
 #ifdef _M_X86_64
       CPUCore::JIT64,
 #elif defined(_M_ARM_64)
@@ -569,10 +569,7 @@ void PowerPCManager::CheckExceptions()
   else
   {
     CheckExternalExceptions();
-    return;
   }
-
-  m_system.GetJitInterface().UpdateMembase();
 }
 
 void PowerPCManager::CheckExternalExceptions()
@@ -626,8 +623,6 @@ void PowerPCManager::CheckExternalExceptions()
                     exceptions);
     }
   }
-
-  m_system.GetJitInterface().UpdateMembase();
 }
 
 void PowerPCManager::CheckBreakPoints()

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <fmt/format.h>
@@ -104,9 +105,9 @@ bool IsTitlePath(const std::string& path, std::optional<FromWhichRoot> from, u64
 
 static bool IsIllegalCharacter(char c)
 {
-  static constexpr auto illegal_chars = {'\"', '*', '/', ':', '<', '>', '?', '\\', '|', '\x7f'};
-  return static_cast<unsigned char>(c) <= 0x1F ||
-         std::find(illegal_chars.begin(), illegal_chars.end(), c) != illegal_chars.end();
+  static const std::unordered_set<char> illegal_chars = {'\"', '*', '/',  ':', '<',
+                                                         '>',  '?', '\\', '|', '\x7f'};
+  return (c >= 0 && c <= 0x1F) || illegal_chars.find(c) != illegal_chars.end();
 }
 
 std::string EscapeFileName(const std::string& filename)

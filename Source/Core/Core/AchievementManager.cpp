@@ -290,11 +290,9 @@ void AchievementManager::DoFrame()
   time_t current_time = std::time(nullptr);
   if (difftime(current_time, m_last_ping_time) > 120)
   {
-    GenerateRichPresence();
-    m_queue.EmplaceItem([this] { PingRichPresence(m_rich_presence); });
+    RichPresence rp = GenerateRichPresence();
+    m_queue.EmplaceItem([this, rp] { PingRichPresence(rp); });
     m_last_ping_time = current_time;
-    if (m_update_callback)
-      m_update_callback();
   }
 }
 
@@ -307,17 +305,17 @@ u32 AchievementManager::MemoryPeeker(u32 address, u32 num_bytes, void* ud)
   {
   case 1:
     return m_system->GetMMU()
-        .HostTryReadU8(threadguard, address, PowerPC::RequestedAddressSpace::Physical)
+        .HostTryReadU8(threadguard, address)
         .value_or(PowerPC::ReadResult<u8>(false, 0u))
         .value;
   case 2:
     return m_system->GetMMU()
-        .HostTryReadU16(threadguard, address, PowerPC::RequestedAddressSpace::Physical)
+        .HostTryReadU16(threadguard, address)
         .value_or(PowerPC::ReadResult<u16>(false, 0u))
         .value;
   case 4:
     return m_system->GetMMU()
-        .HostTryReadU32(threadguard, address, PowerPC::RequestedAddressSpace::Physical)
+        .HostTryReadU32(threadguard, address)
         .value_or(PowerPC::ReadResult<u32>(false, 0u))
         .value;
   default:
@@ -411,13 +409,6 @@ void AchievementManager::GetAchievementProgress(AchievementId achievement_id, u3
                                                 u32* target)
 {
   rc_runtime_get_achievement_measured(&m_runtime, achievement_id, value, target);
-}
-
-AchievementManager::RichPresence AchievementManager::GetRichPresence()
-{
-  std::lock_guard lg{m_lock};
-  RichPresence rich_presence = m_rich_presence;
-  return rich_presence;
 }
 
 void AchievementManager::CloseGame()
@@ -594,17 +585,18 @@ void AchievementManager::ActivateDeactivateAchievement(AchievementId id, bool en
     rc_runtime_deactivate_achievement(&m_runtime, id);
 }
 
-void AchievementManager::GenerateRichPresence()
+RichPresence AchievementManager::GenerateRichPresence()
 {
+  RichPresence rp_buffer;
   Core::RunAsCPUThread([&] {
-    std::lock_guard lg{m_lock};
     rc_runtime_get_richpresence(
-        &m_runtime, m_rich_presence.data(), RP_SIZE,
+        &m_runtime, rp_buffer.data(), RP_SIZE,
         [](unsigned address, unsigned num_bytes, void* ud) {
           return static_cast<AchievementManager*>(ud)->MemoryPeeker(address, num_bytes, ud);
         },
         this, nullptr);
   });
+  return rp_buffer;
 }
 
 AchievementManager::ResponseType AchievementManager::AwardAchievement(AchievementId achievement_id)
@@ -724,22 +716,9 @@ void AchievementManager::HandleLeaderboardTriggeredEvent(const rc_runtime_event_
   {
     if (m_game_data.leaderboards[ix].id == runtime_event->id)
     {
-      FormattedValue value{};
-      rc_runtime_format_lboard_value(value.data(), static_cast<int>(value.size()),
-                                     runtime_event->value, m_game_data.leaderboards[ix].format);
-      if (std::find(value.begin(), value.end(), '\0') == value.end())
-      {
-        OSD::AddMessage(fmt::format("Scored {} on leaderboard: {}",
-                                    std::string_view{value.data(), value.size()},
-                                    m_game_data.leaderboards[ix].title),
-                        OSD::Duration::VERY_LONG, OSD::Color::YELLOW);
-      }
-      else
-      {
-        OSD::AddMessage(fmt::format("Scored {} on leaderboard: {}", value.data(),
-                                    m_game_data.leaderboards[ix].title),
-                        OSD::Duration::VERY_LONG, OSD::Color::YELLOW);
-      }
+      OSD::AddMessage(fmt::format("Scored {} on leaderboard: {}", runtime_event->value,
+                                  m_game_data.leaderboards[ix].title),
+                      OSD::Duration::VERY_LONG, OSD::Color::YELLOW);
       break;
     }
   }

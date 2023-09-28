@@ -55,7 +55,6 @@ public:
 
   Result<NandStats> GetNandStats() override;
   Result<DirectoryStats> GetDirectoryStats(const std::string& path) override;
-  Result<ExtendedDirectoryStats> GetExtendedDirectoryStats(const std::string& path) override;
 
   void SetNandRedirects(std::vector<NandRedirect> nand_redirects) override;
 

@@ -14,7 +14,6 @@
 #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
 
 #include "DolphinQt/Config/ControllerInterface/ControllerInterfaceWindow.h"
-#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 
 #include "InputCommon/InputConfig.h"
 
@@ -43,7 +42,6 @@ void WiimoteEmuExtensionMotionInput::CreateNunchukLayout()
     ControllerInterfaceWindow* window = new ControllerInterfaceWindow(this);
     window->setAttribute(Qt::WA_DeleteOnClose, true);
     window->setWindowModality(Qt::WindowModality::WindowModal);
-    SetQWidgetWindowDecorations(window);
     window->show();
   });
   layout->addLayout(warning_layout, 0, 0, 1, -1);

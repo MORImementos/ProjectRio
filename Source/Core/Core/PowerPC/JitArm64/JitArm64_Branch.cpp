@@ -11,7 +11,6 @@
 #include "Core/PowerPC/JitArm64/JitArm64_RegCache.h"
 #include "Core/PowerPC/PPCTables.h"
 #include "Core/PowerPC/PowerPC.h"
-#include "Core/System.h"
 
 using namespace Arm64Gen;
 
@@ -65,8 +64,6 @@ void JitArm64::rfi(UGeckoInstruction inst)
 
   STR(IndexType::Unsigned, WA, PPC_REG, PPCSTATE_OFF(msr));  // STR rB in to rA
 
-  EmitStoreMembase(WA);
-
   LDR(IndexType::Unsigned, WA, PPC_REG, PPCSTATE_OFF_SPR(SPR_SRR0));
   gpr.Unlock(WB, WC);
 
@@ -79,12 +76,12 @@ void JitArm64::bx(UGeckoInstruction inst)
   INSTRUCTION_START
   JITDISABLE(bJITBranchOff);
 
-  ARM64Reg WA = ARM64Reg::INVALID_REG;
   if (inst.LK)
   {
-    WA = gpr.GetReg();
+    ARM64Reg WA = gpr.GetReg();
     MOVI2R(WA, js.compilerPC + 4);
     STR(IndexType::Unsigned, WA, PPC_REG, PPCSTATE_OFF_SPR(SPR_LR));
+    gpr.Unlock(WA);
   }
 
   if (!js.isLastInstruction)
@@ -94,12 +91,8 @@ void JitArm64::bx(UGeckoInstruction inst)
       // We have to fake the stack as the RET instruction was not
       // found in the same block. This is a big overhead, but still
       // better than calling the dispatcher.
-      FakeLKExit(js.compilerPC + 4, WA);
+      FakeLKExit(js.compilerPC + 4);
     }
-
-    if (WA != ARM64Reg::INVALID_REG)
-      gpr.Unlock(WA);
-
     return;
   }
 
@@ -108,24 +101,19 @@ void JitArm64::bx(UGeckoInstruction inst)
 
   if (js.op->branchIsIdleLoop)
   {
-    if (WA != ARM64Reg::INVALID_REG)
-      gpr.Unlock(WA);
-
     // make idle loops go faster
-    ARM64Reg WB = gpr.GetReg();
-    ARM64Reg XB = EncodeRegTo64(WB);
+    ARM64Reg WA = gpr.GetReg();
+    ARM64Reg XA = EncodeRegTo64(WA);
 
-    MOVP2R(XB, &CoreTiming::GlobalIdle);
-    BLR(XB);
-    gpr.Unlock(WB);
+    MOVP2R(XA, &CoreTiming::GlobalIdle);
+    BLR(XA);
+    gpr.Unlock(WA);
 
     WriteExceptionExit(js.op->branchTo);
     return;
   }
 
-  WriteExit(js.op->branchTo, inst.LK, js.compilerPC + 4, inst.LK ? WA : ARM64Reg::INVALID_REG);
-  if (WA != ARM64Reg::INVALID_REG)
-    gpr.Unlock(WA);
+  WriteExit(js.op->branchTo, inst.LK, js.compilerPC + 4);
 }
 
 void JitArm64::bcx(UGeckoInstruction inst)
@@ -134,8 +122,6 @@ void JitArm64::bcx(UGeckoInstruction inst)
   JITDISABLE(bJITBranchOff);
 
   ARM64Reg WA = gpr.GetReg();
-  ARM64Reg WB = inst.LK ? gpr.GetReg() : WA;
-
   FixupBranch pCTRDontBranch;
   if ((inst.BO & BO_DONT_DECREMENT_FLAG) == 0)  // Decrement and test CTR
   {
@@ -167,7 +153,7 @@ void JitArm64::bcx(UGeckoInstruction inst)
     STR(IndexType::Unsigned, WA, PPC_REG, PPCSTATE_OFF_SPR(SPR_LR));
   }
 
-  gpr.Flush(FlushMode::MaintainState, WB);
+  gpr.Flush(FlushMode::MaintainState, WA);
   fpr.Flush(FlushMode::MaintainState, ARM64Reg::INVALID_REG);
 
   if (js.op->branchIsIdleLoop)
@@ -182,7 +168,7 @@ void JitArm64::bcx(UGeckoInstruction inst)
   }
   else
   {
-    WriteExit(js.op->branchTo, inst.LK, js.compilerPC + 4, inst.LK ? WA : ARM64Reg::INVALID_REG);
+    WriteExit(js.op->branchTo, inst.LK, js.compilerPC + 4);
   }
 
   SwitchToNearCode();
@@ -200,8 +186,6 @@ void JitArm64::bcx(UGeckoInstruction inst)
   }
 
   gpr.Unlock(WA);
-  if (WB != WA)
-    gpr.Unlock(WB);
 }
 
 void JitArm64::bcctrx(UGeckoInstruction inst)
@@ -224,12 +208,12 @@ void JitArm64::bcctrx(UGeckoInstruction inst)
   gpr.Flush(FlushMode::All, ARM64Reg::INVALID_REG);
   fpr.Flush(FlushMode::All, ARM64Reg::INVALID_REG);
 
-  ARM64Reg WB = ARM64Reg::INVALID_REG;
   if (inst.LK_3)
   {
-    WB = gpr.GetReg();
+    ARM64Reg WB = gpr.GetReg();
     MOVI2R(WB, js.compilerPC + 4);
     STR(IndexType::Unsigned, WB, PPC_REG, PPCSTATE_OFF_SPR(SPR_LR));
+    gpr.Unlock(WB);
   }
 
   ARM64Reg WA = gpr.GetReg();
@@ -237,10 +221,8 @@ void JitArm64::bcctrx(UGeckoInstruction inst)
   LDR(IndexType::Unsigned, WA, PPC_REG, PPCSTATE_OFF_SPR(SPR_CTR));
   AND(WA, WA, LogicalImm(~0x3, 32));
 
-  WriteExit(WA, inst.LK_3, js.compilerPC + 4, inst.LK_3 ? WB : ARM64Reg::INVALID_REG);
+  WriteExit(WA, inst.LK_3, js.compilerPC + 4);
 
-  if (WB != ARM64Reg::INVALID_REG)
-    gpr.Unlock(WB);
   gpr.Unlock(WA);
 }
 

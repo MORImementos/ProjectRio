@@ -407,7 +407,6 @@ void VideoBackendBase::ShutdownShared()
 
   g_bounding_box.reset();
   g_perf_query.reset();
-  g_graphics_mod_manager.reset();
   g_texture_cache.reset();
   g_framebuffer_manager.reset();
   g_shader_cache.reset();

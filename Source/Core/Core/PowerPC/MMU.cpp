@@ -80,15 +80,7 @@ MMU::~MMU() = default;
 {
   return Common::swap32(val);
 }
-[[maybe_unused]] static s32 bswap(s32 val)
-{
-  return Common::swap32(val);
-}
 [[maybe_unused]] static u64 bswap(u64 val)
-{
-  return Common::swap64(val);
-}
-[[maybe_unused]] static s64 bswap(s64 val)
 {
   return Common::swap64(val);
 }
@@ -153,7 +145,7 @@ static void EFB_Write(u32 data, u32 addr)
   }
 }
 
-template <XCheckTLBFlag flag, typename T, MMU::TranslateCondition translate_if>
+template <XCheckTLBFlag flag, typename T, bool never_translate>
 T MMU::ReadFromHardware(u32 em_address)
 {
   const u32 em_address_start_page = em_address & ~HW_PAGE_MASK;
@@ -167,16 +159,14 @@ T MMU::ReadFromHardware(u32 em_address)
     u64 var = 0;
     for (u32 i = 0; i < sizeof(T); ++i)
     {
-      var = (var << 8) | ReadFromHardware<flag, u8, TranslateCondition::Never>(em_address + i);
+      var = (var << 8) | ReadFromHardware<flag, u8, never_translate>(em_address + i);
     }
     return static_cast<T>(var);
   }
 
   bool wi = false;
 
-  const bool do_translate = translate_if == TranslateCondition::Always ||
-                            (translate_if == TranslateCondition::MsrDrSet && m_ppc_state.msr.DR);
-  if (do_translate)
+  if (!never_translate && m_ppc_state.msr.DR)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
     if (!translated_addr.Pass())
@@ -265,7 +255,7 @@ T MMU::ReadFromHardware(u32 em_address)
   return 0;
 }
 
-template <XCheckTLBFlag flag, MMU::TranslateCondition translate_if>
+template <XCheckTLBFlag flag, bool never_translate>
 void MMU::WriteToHardware(u32 em_address, const u32 data, const u32 size)
 {
   DEBUG_ASSERT(size <= 4);
@@ -279,17 +269,15 @@ void MMU::WriteToHardware(u32 em_address, const u32 data, const u32 size)
     // Note that "word" means 32-bit, so paired singles or doubles might still be 32-bit aligned!
     const u32 first_half_size = em_address_end_page - em_address;
     const u32 second_half_size = size - first_half_size;
-    WriteToHardware<flag, translate_if>(em_address, std::rotr(data, second_half_size * 8),
+    WriteToHardware<flag, never_translate>(em_address, std::rotr(data, second_half_size * 8),
                                            first_half_size);
-    WriteToHardware<flag, translate_if>(em_address_end_page, data, second_half_size);
+    WriteToHardware<flag, never_translate>(em_address_end_page, data, second_half_size);
     return;
   }
 
   bool wi = false;
 
-  const bool do_translate = translate_if == TranslateCondition::Always ||
-                            (translate_if == TranslateCondition::MsrDrSet && m_ppc_state.msr.DR);
-  if (do_translate)
+  if (!never_translate && m_ppc_state.msr.DR)
   {
     auto translated_addr = TranslateAddress<flag>(em_address);
     if (!translated_addr.Pass())
@@ -397,8 +385,8 @@ void MMU::WriteToHardware(u32 em_address, const u32 data, const u32 size)
     const u32 end_addr = Common::AlignUp(em_address + size, 8);
     for (u32 addr = start_addr; addr != end_addr; addr += 8)
     {
-      WriteToHardware<flag, TranslateCondition::Never>(addr, rotated_data, 4);
-      WriteToHardware<flag, TranslateCondition::Never>(addr + 4, rotated_data, 4);
+      WriteToHardware<flag, true>(addr, rotated_data, 4);
+      WriteToHardware<flag, true>(addr + 4, rotated_data, 4);
     }
 
     return;
@@ -524,7 +512,7 @@ std::optional<ReadResult<u32>> MMU::HostTryReadInstruction(const Core::CPUThread
   }
   case RequestedAddressSpace::Physical:
   {
-    const u32 value = mmu.ReadFromHardware<XCheckTLBFlag::OpcodeNoException, u32, TranslateCondition::Never>(address);
+    const u32 value = mmu.ReadFromHardware<XCheckTLBFlag::OpcodeNoException, u32, true>(address);
     return ReadResult<u32>(false, value);
   }
   case RequestedAddressSpace::Virtual:
@@ -622,7 +610,7 @@ std::optional<ReadResult<T>> MMU::HostTryReadUX(const Core::CPUThreadGuard& guar
   }
   case RequestedAddressSpace::Physical:
   {
-    T value = mmu.ReadFromHardware<XCheckTLBFlag::NoException, T, TranslateCondition::Never>(address);
+    T value = mmu.ReadFromHardware<XCheckTLBFlag::NoException, T, true>(address);
     return ReadResult<T>(false, std::move(value));
   }
   case RequestedAddressSpace::Virtual:
@@ -720,45 +708,25 @@ void MMU::Write_U64_Swap(const u64 var, const u32 address)
 u8 MMU::HostRead_U8(const Core::CPUThreadGuard& guard, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u8, TranslateCondition::Always>(address);
+  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u8>(address);
 }
 
 u16 MMU::HostRead_U16(const Core::CPUThreadGuard& guard, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u16, TranslateCondition::Always>(address);
+  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u16>(address);
 }
 
 u32 MMU::HostRead_U32(const Core::CPUThreadGuard& guard, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u32, TranslateCondition::Always>(address);
+  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u32>(address);
 }
 
 u64 MMU::HostRead_U64(const Core::CPUThreadGuard& guard, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u64, TranslateCondition::Always>(address);
-}
-
-s8 MMU::HostRead_S8(const Core::CPUThreadGuard& guard, const u32 address)
-{
-  return static_cast<s8>(HostRead_U8(guard, address));
-}
-
-s16 MMU::HostRead_S16(const Core::CPUThreadGuard& guard, const u32 address)
-{
-  return static_cast<s16>(HostRead_U16(guard, address));
-}
-
-s32 MMU::HostRead_S32(const Core::CPUThreadGuard& guard, const u32 address)
-{
-  return static_cast<s32>(HostRead_U32(guard, address));
-}
-
-s64 MMU::HostRead_S64(const Core::CPUThreadGuard& guard, const u32 address)
-{
-  return static_cast<s64>(HostRead_U64(guard, address));
+  return mmu.ReadFromHardware<XCheckTLBFlag::NoException, u64>(address);
 }
 
 float MMU::HostRead_F32(const Core::CPUThreadGuard& guard, const u32 address)
@@ -778,46 +746,26 @@ double MMU::HostRead_F64(const Core::CPUThreadGuard& guard, const u32 address)
 void MMU::HostWrite_U8(const Core::CPUThreadGuard& guard, const u32 var, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 1);
+  mmu.WriteToHardware<XCheckTLBFlag::NoException>(address, var, 1);
 }
 
 void MMU::HostWrite_U16(const Core::CPUThreadGuard& guard, const u32 var, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 2);
+  mmu.WriteToHardware<XCheckTLBFlag::NoException>(address, var, 2);
 }
 
 void MMU::HostWrite_U32(const Core::CPUThreadGuard& guard, const u32 var, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, var, 4);
+  mmu.WriteToHardware<XCheckTLBFlag::NoException>(address, var, 4);
 }
 
 void MMU::HostWrite_U64(const Core::CPUThreadGuard& guard, const u64 var, const u32 address)
 {
   auto& mmu = guard.GetSystem().GetMMU();
-  mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address, static_cast<u32>(var >> 32), 4);
-  mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Always>(address + sizeof(u32), static_cast<u32>(var), 4);
-}
-
-void MMU::HostWrite_S8(const Core::CPUThreadGuard& guard, const s8 var, const u32 address)
-{
-  HostWrite_U8(guard, static_cast<u8>(var), address);
-}
-
-void MMU::HostWrite_S16(const Core::CPUThreadGuard& guard, const s16 var, const u32 address)
-{
-  HostWrite_U16(guard, static_cast<u16>(var), address);
-}
-
-void MMU::HostWrite_S32(const Core::CPUThreadGuard& guard, const s32 var, const u32 address)
-{
-  HostWrite_U32(guard, static_cast<u32>(var), address);
-}
-
-void MMU::HostWrite_S64(const Core::CPUThreadGuard& guard, const s64 var, const u32 address)
-{
-  HostWrite_U64(guard, static_cast<u64>(var), address);
+  mmu.WriteToHardware<XCheckTLBFlag::NoException>(address, static_cast<u32>(var >> 32), 4);
+  mmu.WriteToHardware<XCheckTLBFlag::NoException>(address + sizeof(u32), static_cast<u32>(var), 4);
 }
 
 void MMU::HostWrite_F32(const Core::CPUThreadGuard& guard, const float var, const u32 address)
@@ -848,7 +796,7 @@ std::optional<WriteResult> MMU::HostTryWriteUX(const Core::CPUThreadGuard& guard
     mmu.WriteToHardware<XCheckTLBFlag::NoException>(address, var, size);
     return WriteResult(!!mmu.m_ppc_state.msr.DR);
   case RequestedAddressSpace::Physical:
-    mmu.WriteToHardware<XCheckTLBFlag::NoException, TranslateCondition::Never>(address, var, size);
+    mmu.WriteToHardware<XCheckTLBFlag::NoException, true>(address, var, size);
     return WriteResult(false);
   case RequestedAddressSpace::Virtual:
     if (!mmu.m_ppc_state.msr.DR)
@@ -915,22 +863,6 @@ std::string MMU::HostGetString(const Core::CPUThreadGuard& guard, u32 address, s
       break;
     s += static_cast<char>(res);
     ++address;
-  } while (size == 0 || s.length() < size);
-  return s;
-}
-
-std::u16string MMU::HostGetU16String(const Core::CPUThreadGuard& guard, u32 address, size_t size)
-{
-  std::u16string s;
-  do
-  {
-    if (!HostIsRAMAddress(guard, address) || !HostIsRAMAddress(guard, address + 1))
-      break;
-    const u16 res = HostRead_U16(guard, address);
-    if (!res)
-      break;
-    s += static_cast<char16_t>(res);
-    address += 2;
   } while (size == 0 || s.length() < size);
   return s;
 }
@@ -1158,7 +1090,7 @@ void MMU::ClearDCacheLine(u32 address)
   // TODO: This isn't precisely correct for non-RAM regions, but the difference
   // is unlikely to matter.
   for (u32 i = 0; i < 32; i += 4)
-    WriteToHardware<XCheckTLBFlag::Write, TranslateCondition::Never>(address + i, 0, 4);
+    WriteToHardware<XCheckTLBFlag::Write, true>(address + i, 0, 4);
 }
 
 void MMU::StoreDCacheLine(u32 address)
@@ -1455,8 +1387,8 @@ void MMU::InvalidateTLBEntry(u32 address)
 }
 
 // Page Address Translation
-template <const XCheckTLBFlag flag>
-MMU::TranslateAddressResult MMU::TranslatePageAddress(const EffectiveAddress address, bool* wi)
+MMU::TranslateAddressResult MMU::TranslatePageAddress(const EffectiveAddress address,
+                                                      const XCheckTLBFlag flag, bool* wi)
 {
   // TLB cache
   // This catches 99%+ of lookups in practice, so the actual page table entry code below doesn't
@@ -1509,11 +1441,11 @@ MMU::TranslateAddressResult MMU::TranslatePageAddress(const EffectiveAddress add
 
     for (int i = 0; i < 8; i++, pteg_addr += 8)
     {
-      const u32 pteg = ReadFromHardware<flag, u32, TranslateCondition::Never>(pteg_addr);
+      const u32 pteg = m_memory.Read_U32(pteg_addr);
 
       if (pte1.Hex == pteg)
       {
-        UPTE_Hi pte2(ReadFromHardware<flag, u32, TranslateCondition::Never>(pteg_addr + 4));
+        UPTE_Hi pte2(m_memory.Read_U32(pteg_addr + 4));
 
         // set the access bits
         switch (flag)
@@ -1711,7 +1643,7 @@ MMU::TranslateAddressResult MMU::TranslateAddress(u32 address)
   if (TranslateBatAddress(IsOpcodeFlag(flag) ? m_ibat_table : m_dbat_table, &address, &wi))
     return TranslateAddressResult{TranslateAddressResultEnum::BAT_TRANSLATED, address, wi};
 
-  return TranslatePageAddress<flag>(EffectiveAddress{address}, &wi);
+  return TranslatePageAddress(EffectiveAddress{address}, flag, &wi);
 }
 
 std::optional<u32> MMU::GetTranslatedAddress(u32 address)

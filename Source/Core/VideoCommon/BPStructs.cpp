@@ -397,7 +397,7 @@ static void BPWritten(PixelShaderManager& pixel_shader_manager,
     memory.CopyFromEmu(texMem + tlutTMemAddr, addr, tlutXferCount);
 
     if (OpcodeDecoder::g_record_fifo_data)
-      FifoRecorder::GetInstance().UseMemory(addr, tlutXferCount, MemoryUpdate::Type::TMEM);
+      FifoRecorder::GetInstance().UseMemory(addr, tlutXferCount, MemoryUpdate::TMEM);
 
     TMEM::InvalidateAll();
 
@@ -615,7 +615,7 @@ static void BPWritten(PixelShaderManager& pixel_shader_manager,
       }
 
       if (OpcodeDecoder::g_record_fifo_data)
-        FifoRecorder::GetInstance().UseMemory(src_addr, bytes_read, MemoryUpdate::Type::TMEM);
+        FifoRecorder::GetInstance().UseMemory(src_addr, bytes_read, MemoryUpdate::TMEM);
 
       TMEM::InvalidateAll();
     }

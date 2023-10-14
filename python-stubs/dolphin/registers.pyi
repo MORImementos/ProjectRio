@@ -49,3 +49,27 @@ def read_lr() -> int:
     """
     Reads LR
     """
+
+
+def read_cr() -> int:
+    """
+    Reads CR
+    """
+
+
+def read_pc() -> int:
+    """
+    Reads PC
+    """
+
+
+def read_npc() -> int:
+    """
+    Reads NPC
+    """
+
+
+def write_cr(value: int) -> None:
+    """
+    Writes value to CR
+    """

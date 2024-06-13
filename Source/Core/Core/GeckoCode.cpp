@@ -16,7 +16,7 @@
 #include "Common/FileUtil.h"
 
 #include "Core/Config/MainSettings.h"
-#include "Core/ConfigManager.h"
+#include "Core/Core.h"
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/System.h"
@@ -80,22 +80,29 @@ void SetActiveCodes(std::span<const GeckoCode> gcodes)
   {
     s_active_codes.reserve(gcodes.size());
     std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
-                 [](const GeckoCode& code) { return code.enabled; });
+                 [](const GeckoCode& code) { return code.enabled || code.built_in_code; });
   }
-  else if (tagset_gecko_string.has_value())
+  else
   {
-    GeckoCode gcode;
-    for (auto& line : tagset_gecko_string.value())
+    s_active_codes.reserve(gcodes.size());
+    std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
+                 [](const GeckoCode& code) { return code.built_in_code; });
+
+    if (tagset_gecko_string.has_value())
     {
-      GeckoCode::Code new_code;
-      // TODO: support options
-      if (std::optional<GeckoCode::Code> code = DeserializeLine(line))
-        new_code = *code;
-      else
-        new_code.original_line = line;
-      gcode.codes.push_back(new_code);
+      GeckoCode gcode;
+      for (auto& line : tagset_gecko_string.value())
+      {
+        GeckoCode::Code new_code;
+        // TODO: support options
+        if (std::optional<GeckoCode::Code> code = DeserializeLine(line))
+          new_code = *code;
+        else
+          new_code.original_line = line;
+        gcode.codes.push_back(new_code);
+      }
+      s_active_codes.push_back(gcode);
     }
-    s_active_codes.push_back(gcode);
   }
 
   s_active_codes.shrink_to_fit();
@@ -124,12 +131,11 @@ std::vector<GeckoCode> SetAndReturnActiveCodes(std::span<const GeckoCode> gcodes
   std::lock_guard lk(s_active_codes_lock);
 
   s_active_codes.clear();
-  if (true)
-  {
-    s_active_codes.reserve(gcodes.size());
-    std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
-                 [](const GeckoCode& code) { return code.enabled; });
-  }
+  
+  s_active_codes.reserve(gcodes.size());
+  std::copy_if(gcodes.begin(), gcodes.end(), std::back_inserter(s_active_codes),
+                [](const GeckoCode& code) { return code.enabled; });
+  
   s_active_codes.shrink_to_fit();
 
   s_code_handler_installed = Installation::Uninstalled;
@@ -156,7 +162,7 @@ static Installation InstallCodeHandlerLocked(const Core::CPUThreadGuard& guard)
   }
 
   u8 mmio_addr = 0xCC;
-  if (SConfig::GetInstance().bWii)
+  if (guard.GetSystem().IsWii())
   {
     mmio_addr = 0xCD;
   }
@@ -166,7 +172,7 @@ static Installation InstallCodeHandlerLocked(const Core::CPUThreadGuard& guard)
     PowerPC::MMU::HostWrite_U8(guard, data[i], INSTALLER_BASE_ADDRESS + i);
 
   // Patch the code handler to the current system type (Gamecube/Wii)
-  for (unsigned int h = 0; h < data.length(); h += 4)
+  for (u32 h = 0; h < data.length(); h += 4)
   {
     // Patch MMIO address
     if (PowerPC::MMU::HostRead_U32(guard, INSTALLER_BASE_ADDRESS + h) ==
@@ -177,9 +183,19 @@ static Installation InstallCodeHandlerLocked(const Core::CPUThreadGuard& guard)
     }
   }
 
-  const u32 codelist_base_address =
-      INSTALLER_BASE_ADDRESS + static_cast<u32>(data.size()) - CODE_SIZE;
-  const u32 codelist_end_address = INSTALLER_END_ADDRESS;
+  u32 codelist_base_address = INSTALLER_BASE_ADDRESS + static_cast<u32>(data.size()) - CODE_SIZE;
+  u32 codelist_end_address = INSTALLER_END_ADDRESS;
+
+  auto free_memory_base_address = Core::getGameFreeMemory();
+  bool use_free_memory = free_memory_base_address.has_value();
+  if (use_free_memory)
+  {
+    // Move Gecko code handler to the free mem region
+    codelist_base_address = free_memory_base_address.value().first;
+    codelist_end_address = free_memory_base_address.value().second;
+    PowerPC::MMU::HostWrite_U32(guard, ((codelist_base_address & 0xFFFF0000) >> 16 ) + 0x3DE00000, 0x80001904);
+    PowerPC::MMU::HostWrite_U32(guard, (codelist_base_address & 0x0000FFFF) + 0x61EF0000, 0x80001908);
+  }
 
   // Write a magic value to 'gameid' (codehandleronly does not actually read this).
   // This value will be read back and modified over time by HLE_Misc::GeckoCodeHandlerICacheFlush.
@@ -227,11 +243,9 @@ static Installation InstallCodeHandlerLocked(const Core::CPUThreadGuard& guard)
   // Turn on codes
   PowerPC::MMU::HostWrite_U8(guard, 1, INSTALLER_BASE_ADDRESS + 7);
 
-  auto& system = Core::System::GetInstance();
-  auto& ppc_state = system.GetPPCState();
-
   // Invalidate the icache and any asm codes
-  for (unsigned int j = 0; j < (INSTALLER_END_ADDRESS - INSTALLER_BASE_ADDRESS); j += 32)
+  auto& ppc_state = guard.GetSystem().GetPPCState();
+  for (u32 j = 0; j < (INSTALLER_END_ADDRESS - INSTALLER_BASE_ADDRESS); j += 32)
   {
     ppc_state.iCache.Invalidate(INSTALLER_BASE_ADDRESS + j);
   }
@@ -277,8 +291,7 @@ void RunCodeHandler(const Core::CPUThreadGuard& guard)
     }
   }
 
-  auto& system = Core::System::GetInstance();
-  auto& ppc_state = system.GetPPCState();
+  auto& ppc_state = guard.GetSystem().GetPPCState();
 
   // We always do this to avoid problems with the stack since we're branching in random locations.
   // Even with function call return hooks (PC == LR), hand coded assembler won't necessarily
@@ -300,7 +313,7 @@ void RunCodeHandler(const Core::CPUThreadGuard& guard)
   PowerPC::MMU::HostWrite_U32(guard, LR(ppc_state), SP + 16);
   PowerPC::MMU::HostWrite_U32(guard, ppc_state.cr.Get(), SP + 20);
   // Registers FPR0->13 are volatile
-  for (int i = 0; i < 14; ++i)
+  for (u32 i = 0; i < 14; ++i)
   {
     PowerPC::MMU::HostWrite_U64(guard, ppc_state.ps[i].PS0AsU64(), SP + 24 + 2 * i * sizeof(u64));
     PowerPC::MMU::HostWrite_U64(guard, ppc_state.ps[i].PS1AsU64(),

@@ -140,7 +140,7 @@ private:
   bool m_was_unpaused = false;
 };
 
-bool Init(std::unique_ptr<BootParameters> boot, const WindowSystemInfo& wsi);
+bool Init(Core::System& system, std::unique_ptr<BootParameters> boot, const WindowSystemInfo& wsi);
 void Stop();
 void Shutdown();
 
@@ -163,7 +163,7 @@ bool IsHostThread();
 bool WantsDeterminism();
 
 // [NOT THREADSAFE] For use by Host only
-void SetState(State state);
+void SetState(State state, bool report_state_change = true);
 State GetState();
 
 void SaveScreenShot();
@@ -172,7 +172,7 @@ void SaveScreenShot(std::string_view name);
 // This displays messages in a user-visible way.
 void DisplayMessage(std::string message, int time_in_ms);
 
-    void RunRioFunctions(const Core::CPUThreadGuard& guard);
+void RunRioFunctions(const Core::CPUThreadGuard& guard);
 void FrameUpdateOnCPUThread();
 void OnFrameEnd();
 bool IsGolfMode();
@@ -221,12 +221,11 @@ void DoFrameStep();
 void UpdateInputGate(bool require_focus, bool require_full_focus = false);
 
 void UpdateTitle();
+
 float u32ToFloat(u32 value);
 float ms_to_mph(float MetersPerSecond);
 float vectorMagnitude(float x, float y, float z);
 float RoundZ(float num);
-bool isNight();
-bool isDisableReplays();
 void MSSBCalculateNextGolfer(const Core::CPUThreadGuard& guard, int& nextGolfer);
 void MGTTCalculateNextGolfer(const Core::CPUThreadGuard& guard, int& nextGolfer);
 
@@ -236,6 +235,7 @@ void DisplayPlayerNames(const Core::CPUThreadGuard& guard);
 void SetAvgPing(const Core::CPUThreadGuard& guard);
 void SetNetplayerUserInfo();
 void RunDraftTimer(const Core::CPUThreadGuard& guard);
+int GetNextGolferID();
 
 //enum class GameMode
 //{
@@ -252,7 +252,12 @@ void SetGameID(u32 gameID);
 std::optional<TagSet> GetActiveTagSet(bool netplay);
 void SetTagSet(std::optional<TagSet> tagset, bool netplay);
 bool isTagSetActive(std::optional<bool> netplay = std::nullopt);
+bool isNetplay();
 std::optional<std::vector<std::string>> GetTagSetGeckoString();
+bool GameSupportsTagSets();
+
+// Helper function for the Gecko loader expansion
+std::optional<std::pair<u32,u32>> getGameFreeMemory();
 
 static const u32 aOpponentPort = 0x802EBF92;
 static const u32 aFielderPort = 0x802EBF94;

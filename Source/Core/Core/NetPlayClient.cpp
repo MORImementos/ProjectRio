@@ -287,7 +287,7 @@ bool NetPlayClient::Connect()
   ENetEvent netEvent;
   int net;
   while ((net = enet_host_service(m_client, &netEvent, 5000)) > 0 &&
-         netEvent.type == ENetEventType(42))  // See PR #11381 and ENetUtil::InterceptCallback
+         static_cast<int>(netEvent.type) == Common::ENet::SKIPPABLE_EVENT)
   {
     // ignore packets from traversal server
   }
@@ -848,21 +848,17 @@ void NetPlayClient::OnGolfSwitch(sf::Packet& packet)
   m_current_golfer = pid;
   m_dialog->OnGolferChanged(m_local_player->pid == pid, pid != 0 ? m_players[pid].name : "");
 
-  NOTICE_LOG_FMT(NETPLAY, "Running OnGolfSwitch. local pid: {} - current golfer pid: {} - previous golfer: {}", m_local_player->pid, pid, previous_golfer);
-
   if (m_local_player->pid == previous_golfer)
   {
     sf::Packet spac;
     spac << MessageID::GolfRelease;
     Send(spac);
-    NOTICE_LOG_FMT(NETPLAY, "Sent GolfRelease");
   }
   else if (m_local_player->pid == pid)
   {
     sf::Packet spac;
     spac << MessageID::GolfAcquire;
     Send(spac);
-    NOTICE_LOG_FMT(NETPLAY, "Sent GolfAquire");
 
     // Pads are already calibrated so we can just ignore this
     m_first_pad_status_received.fill(true);
@@ -876,7 +872,6 @@ void NetPlayClient::OnGolfPrepare(sf::Packet& packet)
 {
   m_wait_on_input_received = true;
   m_wait_on_input = true;
-  NOTICE_LOG_FMT(NETPLAY, "Ran function OnGolfPrepare");
 }
 
 void NetPlayClient::OnChangeGame(sf::Packet& packet)
@@ -917,7 +912,6 @@ void NetPlayClient::OnGameStatus(sf::Packet& packet)
 
 void NetPlayClient::OnStartGame(sf::Packet& packet)
 {
-  NOTICE_LOG_FMT(NETPLAY, "\n --- Start of game {} --- \npid: {}", m_selected_game.game_id, m_local_player->pid);
   {
     std::lock_guard lkg(m_crit.game);
 
@@ -1016,13 +1010,11 @@ void NetPlayClient::OnStartGame(sf::Packet& packet)
   }
 
   m_dialog->OnMsgStartGame();
-  m_dialog->StartingMsg(Core::isTagSetActive(true));
 }
 
 void NetPlayClient::OnStopGame(sf::Packet& packet)
 {
   INFO_LOG_FMT(NETPLAY, "Game stopped");
-  NOTICE_LOG_FMT(NETPLAY, "\n --- Game stopped --- \n");
 
   StopGame();
   m_dialog->OnMsgStopGame();
@@ -1651,7 +1643,7 @@ void NetPlayClient::OnNightMsg(sf::Packet& packet)
   bool is_night;
   packet >> is_night;
   m_dialog->OnNightResult(is_night);
-  m_night_stadium = is_night;
+  Gecko::setNightStadium(is_night);
 }
 
 void NetPlayClient::OnDisableReplaysMsg(sf::Packet& packet)
@@ -1659,7 +1651,7 @@ void NetPlayClient::OnDisableReplaysMsg(sf::Packet& packet)
   bool disable;
   packet >> disable;
   m_dialog->OnDisableReplaysResult(disable);
-  m_disable_replays = disable;
+  Gecko::setDisableReplays(disable);
 }
 
 void NetPlayClient::OnChecksumMsg(sf::Packet& packet)
@@ -1712,19 +1704,9 @@ void NetPlayClient::DisplayPlayersPing()
                        OSD::Duration::SHORT, OSD::Color::CYAN);
 }
 
-bool NetPlayClient::isNight()
-{
-  return netplay_client->m_night_stadium;
-}
-
 bool NetPlayClient::isGolfMode()
 {
   return netplay_client->m_host_input_authority;
-}
-
-bool NetPlayClient::isDisableReplays()
-{
-  return netplay_client->m_disable_replays;
 }
 
 std::string NetPlayClient::GetNetplayNames(u8 PortInt)
@@ -1835,6 +1817,11 @@ void NetPlayClient::ThreadFunc()
     if (m_traversal_client)
       m_traversal_client->HandleResends();
     net = enet_host_service(m_client, &netEvent, 250);
+
+    // run auto golf mode stuff here
+    if (Core::IsRunning() && m_is_running.IsSet())  // redundancy
+      AutoGolfMode();
+
     while (!m_async_queue.Empty())
     {
       INFO_LOG_FMT(NETPLAY, "Processing async queue event.");
@@ -1871,7 +1858,11 @@ void NetPlayClient::ThreadFunc()
 
         break;
       default:
-        ERROR_LOG_FMT(NETPLAY, "enet_host_service: unknown event type: {}", int(netEvent.type));
+        // not a valid switch case due to not technically being part of the enum
+        if (static_cast<int>(netEvent.type) == Common::ENet::SKIPPABLE_EVENT)
+          INFO_LOG_FMT(NETPLAY, "enet_host_service: skippable packet event");
+        else
+          ERROR_LOG_FMT(NETPLAY, "enet_host_service: unknown event type: {}", int(netEvent.type));
         break;
       }
     }
@@ -1926,19 +1917,6 @@ void NetPlayClient::SendSpectatorSetting(bool spectator)
   SendAsync(std::move(packet));
 }
 
-void NetPlayClient::SendActiveGeckoCodes()
-{
-  sf::Packet packet;
-  packet << MessageID::SendCodes;
-  std::string codeStr = "";
-
-  for (const std::string code : v_ActiveGeckoCodes)
-    codeStr += code + "\n";
-  packet << codeStr;
-
-  SendAsync(std::move(packet));
-}
-
 void NetPlayClient::SendNightStadium(bool is_night)
 {
   sf::Packet packet;
@@ -1955,34 +1933,6 @@ void NetPlayClient::SendDisableReplays(bool disable)
   packet << disable;
 
   SendAsync(std::move(packet));
-}
-
-void NetPlayClient::GetActiveGeckoCodes()
-{
-  // don't use any gecko codes if playing under a tagset
-  if (Core::isTagSetActive(true))
-    return;
-
-  // Find all INI files
-  const auto game_id = m_selected_game.game_id;
-  const auto revision = 0;
-  Common::IniFile globalIni;
-  for (const std::string& filename : ConfigLoaders::GetGameIniFilenames(game_id, revision))
-    globalIni.Load(File::GetSysDirectory() + GAMESETTINGS_DIR DIR_SEP + filename, true);
-  Common::IniFile localIni;
-  for (const std::string& filename : ConfigLoaders::GetGameIniFilenames(game_id, revision))
-    localIni.Load(File::GetUserPath(D_GAMESETTINGS_IDX) + filename, true);
-
-  // Create a Gecko Code Vector with just the active codes
-  std::vector<Gecko::GeckoCode> s_active_codes =
-      Gecko::SetAndReturnActiveCodes(Gecko::LoadCodes(globalIni, localIni));
-
-  v_ActiveGeckoCodes = {};
-  for (const Gecko::GeckoCode& active_code : s_active_codes)
-  {
-    v_ActiveGeckoCodes.push_back(active_code.name);
-  }
-  SendActiveGeckoCodes();
 }
 
 void NetPlayClient::SendCoinFlip(int randNum)
@@ -2080,8 +2030,9 @@ bool NetPlayClient::StartGame(const std::string& path)
 
   if (m_dialog->IsRecording())
   {
-    if (Movie::IsReadOnly())
-      Movie::SetReadOnly(false);
+    auto& movie = Core::System::GetInstance().GetMovie();
+    if (movie.IsReadOnly())
+      movie.SetReadOnly(false);
 
     Movie::ControllerTypeArray controllers{};
     Movie::WiimoteEnabledArray wiimotes{};
@@ -2095,7 +2046,7 @@ bool NetPlayClient::StartGame(const std::string& path)
         controllers[i] = Movie::ControllerType::None;
       wiimotes[i] = m_wiimote_map[i] > 0;
     }
-    Movie::BeginRecordingInput(controllers, wiimotes);
+    movie.BeginRecordingInput(controllers, wiimotes);
   }
 
   for (unsigned int i = 0; i < 4; ++i)
@@ -2128,6 +2079,8 @@ bool NetPlayClient::StartGame(const std::string& path)
   boot_session_data->SetNetplaySettings(std::make_unique<NetPlay::NetSettings>(m_net_settings));
 
   m_dialog->BootGame(path, std::move(boot_session_data));
+
+  m_dialog->StartingMsg(Core::isTagSetActive(true));
 
   UpdateDevices();
 
@@ -2349,7 +2302,6 @@ bool NetPlayClient::GetNetPads(const int pad_nb, const bool batching, GCPadStatu
       sf::Packet spac;
       spac << MessageID::GolfPrepare;
       Send(spac);
-      NOTICE_LOG_FMT(NETPLAY, "Sent GolfPrepare to clients");
 
       m_wait_on_input_received = false;
     }
@@ -2446,14 +2398,15 @@ bool NetPlayClient::GetNetPads(const int pad_nb, const bool batching, GCPadStatu
 
   m_pad_buffer[pad_nb].Pop(*pad_status);
 
-  if (Movie::IsRecordingInput())
+  auto& movie = Core::System::GetInstance().GetMovie();
+  if (movie.IsRecordingInput())
   {
-    Movie::RecordInput(pad_status, pad_nb);
-    Movie::InputUpdate();
+    movie.RecordInput(pad_status, pad_nb);
+    movie.InputUpdate();
   }
   else
   {
-    Movie::CheckPadStatus(pad_status, pad_nb);
+    movie.CheckPadStatus(pad_status, pad_nb);
   }
 
   return true;
@@ -2706,7 +2659,6 @@ void NetPlayClient::RequestGolfControl(const PlayerId pid)
   packet << MessageID::GolfRequest;
   packet << pid;
   SendAsync(std::move(packet));
-  NOTICE_LOG_FMT(NETPLAY, "Sent GolfRequest for client {} to clients", pid);
 }
 
 void NetPlayClient::RequestGolfControl()
@@ -2726,13 +2678,16 @@ void NetPlayClient::SendGameID(u32 gameId)
   netplay_client->SendAsync(std::move(packet));
 }
 
-void NetPlayClient::AutoGolfMode(int nextGolfer)
-{
-  netplay_client->AutoGolfModeLogic(nextGolfer);
-}
 
-void NetPlayClient::AutoGolfModeLogic(int nextGolfer)
+void NetPlayClient::AutoGolfMode()
 {
+  // check core here
+  // - make sure CPU thread isn't active
+  // - if so, check if we're the golfer
+  // - if so, check core for next golfer value and call auto golf function
+  if (Core::IsCPUThread())
+    return;
+
   PlayerId clientID = m_local_player->pid; // refers to netplay client (the computer that's connected)
 
   // don't run the rest of the code unless we're the golfer
@@ -2741,20 +2696,24 @@ void NetPlayClient::AutoGolfModeLogic(int nextGolfer)
     return;
   }
 
-  // auto golf logic will only complete if client's been the golfer for more than 60 frames
-  // this is to ensure that under laggier conditions, a golfer who's game is too far behind
-  // doesn't swap the golfer status back and forth for a short while, which can be jarring to players
+  // this little block makes it so that the auto golf logic will only complete if the client's been
+  // the golfer for more than 60 frames. this is to ensure that under laggier conditions, a golfer
+  // who's game is too far behind doesn't swap the golfer status back and forth for a short while,
+  // which can be extra jarring to players
   if (framesAsGolfer < 255) // don't want a memory overflow here
-    framesAsGolfer++;
+    framesAsGolfer += 1;
   if (framesAsGolfer <= 60) // delay this so that swapping bugs are way less likely; 1 second lockout window (60 frames)
     return;
 
   // if the player who should be the gofler isn't in the lobby, return
+  int nextGolfer = Core::GetNextGolferID();
+  if (nextGolfer >= 4 || nextGolfer < 0)  // something's wrong. probably a CPU player
+    return;                               // return to avoid array out-of-range errors
   if (!PortHasPlayerAssigned(nextGolfer))
     return;
 
   // if the current golfer is also the one who should be the golfer, return
-  // this prevents bugs due to requesting a swap every frame
+  // this prevents bugs due to requesting a swap every frame, which i think caused problems in the old code
   // m_pad_map is an array. the indices are the ports (0->3) and the values are the client ID's assigned to that port
   if (m_pad_map[nextGolfer] == clientID)
     return;
@@ -2763,7 +2722,7 @@ void NetPlayClient::AutoGolfModeLogic(int nextGolfer)
   NOTICE_LOG_FMT(NETPLAY, "Client {} will swap golfer to port {}", clientID, nextGolfer + 1);
   RequestGolfControl(m_pad_map[nextGolfer]);
   framesAsGolfer = 0;
-  NOTICE_LOG_FMT(NETPLAY, "Successfully swapped golfer");
+  NOTICE_LOG_FMT(NETPLAY, "Client {} swaps golfer to port {}", clientID, nextGolfer + 1);
 }
 
 
@@ -2932,7 +2891,7 @@ void NetPlayClient::SendTimeBase()
 
   if (netplay_client->m_timebase_frame % 60 == 0)
   {
-    const sf::Uint64 timebase = SystemTimers::GetFakeTimeBase();
+    const sf::Uint64 timebase = Core::System::GetInstance().GetSystemTimers().GetFakeTimeBase();
 
     sf::Packet packet;
     packet << MessageID::TimeBase;

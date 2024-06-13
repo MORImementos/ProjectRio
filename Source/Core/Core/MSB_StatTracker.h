@@ -128,11 +128,11 @@ static const std::map<u8, std::string> cCharIdToCharName = {
 
 static const std::map<u8, std::string> cStadiumIdToStadiumName = {
     {0x0, "Mario Stadium"},
-    {0x1, "Bowser's Castle"},
-    {0x2, "Wario's Palace"},
-    {0x3, "Yoshi's Island"},
-    {0x4, "Peach's Garden"},
-    {0x5, "DK's Jungle"},
+    {0x1, "Bowser Castle"},
+    {0x2, "Wario Palace"},
+    {0x3, "Yoshi Park"},
+    {0x4, "Peach Garden"},
+    {0x5, "DK Jungle"},
     {0x6, "Toy Field"}
 };
 
@@ -961,7 +961,7 @@ public:
 
     void init(){
         //Reset all game info
-        m_game_info = GameInfo();
+        m_game_info = GameInfo(); // crashed here when enabling night stadium on netplay in debugging
         m_fielder_tracker[0] = FielderTracker();
         m_fielder_tracker[1] = FielderTracker();
 

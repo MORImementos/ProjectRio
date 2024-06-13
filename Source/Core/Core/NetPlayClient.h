@@ -89,6 +89,7 @@ public:
   virtual void OnCourseResult(std::string message) = 0;
   virtual bool IsSpectating() = 0;
   virtual void SetSpectating(bool spectating) = 0;
+  virtual void OnTtlDetermined(u8 ttl) = 0;
 
   virtual bool IsRecording() = 0;
   virtual std::shared_ptr<const UICommon::GameFile>
@@ -150,8 +151,6 @@ public:
   bool ChangeGame(const std::string& game);
   void SendChatMessage(const std::string& msg);
   void SendSpectatorSetting(bool spectator);
-  void SendActiveGeckoCodes();
-  void GetActiveGeckoCodes();
   void SendCoinFlip(int randNum);
   void SendNightStadium(bool is_night);
   void SendStadium(int stadium);
@@ -179,6 +178,7 @@ public:
   void OnTraversalStateChanged() override;
   void OnConnectReady(ENetAddress addr) override;
   void OnConnectFailed(Common::TraversalConnectFailedReason reason) override;
+  void OnTtlDetermined(u8 ttl) override {}
 
   bool IsFirstInGamePad(int ingame_pad) const;
   int NumLocalPads() const;
@@ -199,16 +199,11 @@ public:
   static void SendChecksum(u8 checksumId, u64 frame, u32 checksum);
   bool DoAllPlayersHaveGame();
 
-  static void AutoGolfMode(int nextGolfer);
   static std::string GetNetplayNames(u8 PortInt);
-  static bool isNight();
-  static bool isDisableReplays();
   static u32 sGetPlayersMaxPing();
   static std::map<int, LocalPlayers::LocalPlayers::Player> getNetplayerUserInfo();
   static void SendGameID(u32 gameId);
   static bool isGolfMode();
-  bool m_night_stadium = false;
-  bool m_disable_replays = false;
   u32 maxPing;
 
   const PadMappingArray& GetPadMapping() const;
@@ -316,7 +311,7 @@ private:
   void ComputeGameDigest(const SyncIdentifier& sync_identifier);
   void DisplayPlayersPing();
 
-  void AutoGolfModeLogic(int nextGolfer);
+  void AutoGolfMode();
 
   u32 GetPlayersMaxPing() const;
 

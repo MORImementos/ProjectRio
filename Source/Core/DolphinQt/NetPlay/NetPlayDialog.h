@@ -53,7 +53,6 @@ public:
 
   void Update() override;
   void AppendChat(const std::string& msg) override;
-  void DisplayActiveGeckoCodes();
   void UpdateLobbyLayout();
 
   void OnMsgChangeGame(const NetPlay::SyncIdentifier& sync_identifier,
@@ -73,6 +72,7 @@ public:
   void OnTraversalStateChanged(Common::TraversalClient::State state) override;
   void OnGameStartAborted() override;
   void OnGolferChanged(bool is_golfer, const std::string& golfer_name) override;
+  void OnTtlDetermined(u8 ttl) override;
 
   void StartingMsg(bool is_tagset) override;
   void OnGameMode(std::string mode, std::string description, std::vector<std::string> tags) override;

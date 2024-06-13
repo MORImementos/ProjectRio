@@ -21,7 +21,7 @@
 #include "Common/Logging/ConsoleListener.h"
 #include "Common/Logging/Log.h"
 #include "Common/StringUtil.h"
-#include <Core/Config/MainSettings.h>
+#include "Common/Timer.h"
 
 namespace Common::Log
 {
@@ -97,6 +97,7 @@ static size_t DeterminePathCutOffPoint()
 LogManager::LogManager()
 {
   // create log containers
+  m_log[LogType::ACHIEVEMENTS] = {"RetroAchievements", "Achievements"};
   m_log[LogType::ACTIONREPLAY] = {"ActionReplay", "Action Replay"};
   m_log[LogType::AUDIO] = {"Audio", "Audio Emulator"};
   m_log[LogType::AUDIO_INTERFACE] = {"AI", "Audio Interface"};
@@ -155,13 +156,12 @@ LogManager::LogManager()
   RegisterListener(LogListener::CONSOLE_LISTENER, new ConsoleListener());
 
   // Set up log listeners
-  LogLevel verbosity = LogLevel::LNOTICE;
+  LogLevel verbosity = Config::Get(LOGGER_VERBOSITY);
 
   SetLogLevel(verbosity);
-
-  EnableListener(LogListener::FILE_LISTENER, true);
-  EnableListener(LogListener::CONSOLE_LISTENER, true);
-  EnableListener(LogListener::LOG_WINDOW_LISTENER, true);
+  EnableListener(LogListener::FILE_LISTENER, Config::Get(LOGGER_WRITE_TO_FILE));
+  EnableListener(LogListener::CONSOLE_LISTENER, Config::Get(LOGGER_WRITE_TO_CONSOLE));
+  EnableListener(LogListener::LOG_WINDOW_LISTENER, Config::Get(LOGGER_WRITE_TO_WINDOW));
 
   for (auto& container : m_log)
   {
@@ -245,10 +245,7 @@ void LogManager::SetLogLevel(LogLevel level)
 
 void LogManager::SetEnable(LogType type, bool enable)
 {
-  if (type == LogType::NETPLAY)
-    m_log[type].m_enable = true;
-  else
-    m_log[type].m_enable = enable;
+  m_log[type].m_enable = enable;
 }
 
 bool LogManager::IsEnabled(LogType type, LogLevel level) const

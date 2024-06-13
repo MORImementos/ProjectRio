@@ -490,7 +490,7 @@ void StatTracker::lookForTriggerEvents(const Core::CPUThreadGuard& guard)
     }
 
     //Game State Machine
-    switch (m_game_state){
+    switch (m_game_state){ // crashed here in debugging "Access violation reading location 0xFFFFFFFFFFFFFFFF"
         case (GAME_STATE::PREGAME):
             //Start recording when GameId is set AND record button is pressed AND game has started
             //std::cout << std::hex << "GameId=" << PowerPC::MMU::HostRead_U32(guard, aGameId) << "GameState=" <<  PowerPC::MMU::HostRead_U8(aGameControlStateCurr) << '\n';

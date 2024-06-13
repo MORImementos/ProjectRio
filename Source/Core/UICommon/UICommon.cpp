@@ -62,7 +62,7 @@
 
 namespace UICommon
 {
-static size_t s_config_changed_callback_id;
+static Config::ConfigChangedCallbackID s_config_changed_callback_id;
 
 static void CreateDumpPath(std::string path)
 {
@@ -270,6 +270,7 @@ void CreateDirectories()
   File::CreateFullPath(File::GetUserPath(D_MSSBFILES_IDX));
   File::CreateFullPath(File::GetUserPath(D_HUDFILES_IDX));
   File::CreateFullPath(File::GetUserPath(D_STATELOGGER_IDX));
+  File::CreateFullPath(File::GetUserPath(D_ASM_ROOT_IDX));
 #ifndef ANDROID
   File::CreateFullPath(File::GetUserPath(D_THEMES_IDX));
   File::CreateFullPath(File::GetUserPath(D_STYLES_IDX));
@@ -495,8 +496,7 @@ bool TriggerSTMPowerEvent()
     return false;
 
   Core::DisplayMessage("Shutting down", 30000);
-  auto& system = Core::System::GetInstance();
-  system.GetProcessorInterface().PowerButton_Tap();
+  ios->GetSystem().GetProcessorInterface().PowerButton_Tap();
 
   return true;
 }

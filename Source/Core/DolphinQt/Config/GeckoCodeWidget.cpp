@@ -27,8 +27,10 @@
 
 #include "DolphinQt/Config/CheatCodeEditor.h"
 #include "DolphinQt/Config/CheatWarningWidget.h"
+#include "DolphinQt/Config/HardcoreWarningWidget.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/QtUtils/NonDefaultQPushButton.h"
+#include "DolphinQt/QtUtils/SetWindowDecorations.h"
 
 #include "UICommon/GameFile.h"
 
@@ -50,7 +52,7 @@ GeckoCodeWidget::GeckoCodeWidget(std::string game_id, std::string gametdb_id, u1
 
     const Common::IniFile game_ini_default =
         SConfig::LoadDefaultGameIni(m_game_id, m_game_revision);
-    m_gecko_codes = Gecko::LoadCodes(game_ini_default, game_ini_local);
+    m_gecko_codes = Gecko::LoadCodes(game_ini_default, game_ini_local, m_game_id, false);
   }
 
   UpdateList();
@@ -61,6 +63,9 @@ GeckoCodeWidget::~GeckoCodeWidget() = default;
 void GeckoCodeWidget::CreateWidgets()
 {
   m_warning = new CheatWarningWidget(m_game_id, m_restart_required, this);
+#ifdef USE_RETRO_ACHIEVEMENTS
+  m_hc_warning = new HardcoreWarningWidget(this);
+#endif  // USE_RETRO_ACHIEVEMENTS
   m_code_list = new QListWidget;
   m_name_label = new QLabel;
   m_creator_label = new QLabel;
@@ -111,6 +116,9 @@ void GeckoCodeWidget::CreateWidgets()
   auto* layout = new QVBoxLayout;
 
   layout->addWidget(m_warning);
+#ifdef USE_RETRO_ACHIEVEMENTS
+  layout->addWidget(m_hc_warning);
+#endif  // USE_RETRO_ACHIEVEMENTS
   layout->addWidget(m_code_list);
 
   auto* info_layout = new QFormLayout;
@@ -158,6 +166,10 @@ void GeckoCodeWidget::ConnectWidgets()
   connect(m_download_codes, &QPushButton::clicked, this, &GeckoCodeWidget::DownloadCodes);
   connect(m_warning, &CheatWarningWidget::OpenCheatEnableSettings, this,
           &GeckoCodeWidget::OpenGeneralSettings);
+#ifdef USE_RETRO_ACHIEVEMENTS
+  connect(m_hc_warning, &HardcoreWarningWidget::OpenAchievementSettings, this,
+          &GeckoCodeWidget::OpenAchievementSettings);
+#endif  // USE_RETRO_ACHIEVEMENTS
 }
 
 void GeckoCodeWidget::OnSelectionChanged()
@@ -213,6 +225,7 @@ void GeckoCodeWidget::AddCode()
 
   CheatCodeEditor ed(this);
   ed.SetGeckoCode(&code);
+  SetQWidgetWindowDecorations(&ed);
   if (ed.exec() == QDialog::Rejected)
     return;
 
@@ -231,6 +244,7 @@ void GeckoCodeWidget::EditCode()
 
   CheatCodeEditor ed(this);
   ed.SetGeckoCode(&m_gecko_codes[index]);
+  SetQWidgetWindowDecorations(&ed);
   if (ed.exec() == QDialog::Rejected)
     return;
 
@@ -329,17 +343,20 @@ void GeckoCodeWidget::UpdateList()
   {
     //const auto& code = m_gecko_codes[i];
     auto& code = m_gecko_codes[i];
+    if (!code.built_in_code)
+    {
+      auto* item =
+          new QListWidgetItem(QString::fromStdString(code.name)
+                                  .replace(QStringLiteral("&lt;"), QChar::fromLatin1('<'))
+                                  .replace(QStringLiteral("&gt;"), QChar::fromLatin1('>')));
 
-    auto* item = new QListWidgetItem(QString::fromStdString(code.name)
-                                         .replace(QStringLiteral("&lt;"), QChar::fromLatin1('<'))
-                                         .replace(QStringLiteral("&gt;"), QChar::fromLatin1('>')));
+      item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable |
+                     Qt::ItemIsDragEnabled);
+      item->setCheckState(code.enabled ? Qt::Checked : Qt::Unchecked);
+      item->setData(Qt::UserRole, static_cast<int>(i));
 
-    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable |
-                   Qt::ItemIsDragEnabled);
-    item->setCheckState(code.enabled ? Qt::Checked : Qt::Unchecked);
-    item->setData(Qt::UserRole, static_cast<int>(i));
-
-    m_code_list->addItem(item);
+      m_code_list->addItem(item);
+    }
   }
   m_code_list->setDragDropMode(QAbstractItemView::InternalMove);
   MakeEnabledList();
@@ -404,7 +421,7 @@ void GeckoCodeWidget::MakeEnabledList()
 
   for (auto code : m_gecko_codes)
   {
-    if (code.enabled)
+    if (code.enabled && !code.built_in_code)
     {
       m_enabled_codes_list.push_back(code.name);
     }

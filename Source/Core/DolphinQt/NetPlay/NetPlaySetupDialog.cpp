@@ -381,13 +381,12 @@ NetPlaySetupDialog::~NetPlaySetupDialog()
 
 void NetPlaySetupDialog::ConnectWidgets()
 {
-  connect(m_connection_type, qOverload<int>(&QComboBox::currentIndexChanged), this,
+  connect(m_connection_type, &QComboBox::currentIndexChanged, this,
           &NetPlaySetupDialog::OnConnectionTypeChanged);
 
   // Connect widget
   connect(m_ip_edit, &QLineEdit::textChanged, this, &NetPlaySetupDialog::SaveSettings);
-  connect(m_connect_port_box, qOverload<int>(&QSpinBox::valueChanged), this,
-          &NetPlaySetupDialog::SaveSettings);
+  connect(m_connect_port_box, &QSpinBox::valueChanged, this, &NetPlaySetupDialog::SaveSettings);
   // Host widget
   connect(m_host_port_box, qOverload<int>(&QSpinBox::valueChanged), this,
           &NetPlaySetupDialog::SaveSettings);
@@ -412,7 +411,7 @@ void NetPlaySetupDialog::ConnectWidgets()
     m_host_chunked_upload_limit_box->setEnabled(value);
     SaveSettings();
   });
-  connect(m_host_chunked_upload_limit_box, qOverload<int>(&QSpinBox::valueChanged), this,
+  connect(m_host_chunked_upload_limit_box, &QSpinBox::valueChanged, this,
           &NetPlaySetupDialog::SaveSettings);
 
   connect(m_host_server_browser, &QCheckBox::toggled, this, &NetPlaySetupDialog::SaveSettings);
@@ -563,6 +562,14 @@ void NetPlaySetupDialog::UpdateGameModeDescription()
 
 void NetPlaySetupDialog::CheckGameModesAreAllowed()
 {
+  int currentIndex = m_host_games->currentIndex();
+  if (currentIndex < 0 || currentIndex >= m_host_games->count())
+  {
+    m_host_game_mode->setCurrentIndex(0);
+    m_host_game_mode->setDisabled(true);
+    return;
+  }
+
   std::string game_id = host_games_map.at(m_host_games->currentIndex()).GetGameID();
   if (game_id == "GYQE01")
     m_host_game_mode->setEnabled(true);
@@ -601,6 +608,13 @@ void NetPlaySetupDialog::accept()
     if (m_host_server_browser->isChecked() && m_host_server_name->text().isEmpty())
     {
       ModalMessageBox::critical(this, tr("Error"), tr("You must provide a name for your session!"));
+      return;
+    }
+
+    if (m_host_server_browser->isChecked() && LobbyNameString().length() > 63)
+    {
+      size_t overflow_characters = LobbyNameString().length() - 63;
+      ModalMessageBox::critical(this, tr("Error"), tr("Lobby Name is too long! Remove %1 characters from your lobby name.").arg(overflow_characters));
       return;
     }
 
